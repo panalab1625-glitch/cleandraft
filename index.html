@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CleanDraft v2 prototype: remove AI fingerprints</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .hl { border-radius: 3px; padding: 0 1px; cursor: help; }
+  .cat-dashes{background:#fde68a}.cat-intro{background:#fecaca}.cat-outro{background:#fbcfe8}
+  .cat-transition{background:#ddd6fe}.cat-buzzword{background:#bfdbfe}.cat-hedging{background:#bbf7d0}
+  .cat-contrast{background:#fed7aa}.cat-structure{background:#e5e7eb;text-decoration:underline dotted}
+  .cat-formatting{background:#a5f3fc}
+  del.chg{background:#fee2e2;color:#991b1b;text-decoration:line-through}
+  ins.chg{background:#dcfce7;color:#166534;text-decoration:none}
+  .rejected del.chg{background:transparent;color:inherit;text-decoration:none}
+  .rejected ins.chg{display:none}
+  .chgwrap{cursor:pointer;border-bottom:1px dashed #9ca3af}
+  pre.out{white-space:pre-wrap;word-wrap:break-word;font-family:inherit}
+</style>
+  <link rel="icon" href="favicon.png">
+</head>
+<body class="bg-slate-50 text-slate-800">
+<div class="max-w-7xl mx-auto p-4 md:p-6">
+  <header class="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <div>
+      <h1 class="text-2xl font-bold">CleanDraft <span class="text-indigo-600">v2</span> <span class="text-xs align-middle bg-amber-100 text-amber-800 px-2 py-0.5 rounded">prototype</span></h1>
+      <p class="text-sm text-slate-500">Sounds like you, not like ChatGPT. Runs 100% in your browser, so nothing is uploaded.</p>
+    </div>
+    <div class="flex items-center gap-2 text-sm">
+      <span class="font-medium">Platform:</span>
+      <button data-preset="linkedin" class="preset px-3 py-1 rounded border">LinkedIn</button>
+      <button data-preset="x" class="preset px-3 py-1 rounded border">X</button>
+      <label class="ml-3 flex items-center gap-1"><input type="checkbox" id="keepDashes"> keep my dashes</label>
+    </div>
+  </header>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <section class="bg-white rounded-xl shadow p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="font-semibold">1. Paste your AI draft</h2>
+        <button id="sample" class="text-xs text-indigo-600 underline">load sample</button>
+      </div>
+      <textarea id="input" class="w-full h-56 border rounded p-2 text-sm" placeholder="Paste a ChatGPT / Claude draft here…"></textarea>
+      <div class="flex items-center justify-between mt-2">
+        <div class="text-sm">AI fingerprint score: <span id="scoreBefore" class="font-bold text-lg">0</span>/100</div>
+        <button id="cleanBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-medium">Clean it</button>
+      </div>
+      <h3 class="font-semibold mt-4 mb-1 text-sm">Highlighted fingerprints</h3>
+      <pre id="highlighted" class="out text-sm border rounded p-2 bg-slate-50 min-h-[4rem]"></pre>
+    </section>
+
+    <section class="bg-white rounded-xl shadow p-4">
+      <h2 class="font-semibold mb-2">2. Detected patterns</h2>
+      <div id="groups" class="space-y-2 text-sm max-h-[30rem] overflow-auto"><p class="text-slate-400">Paste text to see what gives it away.</p></div>
+    </section>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-4 mt-4">
+    <section class="bg-white rounded-xl shadow p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="font-semibold">3. Review changes <span class="text-xs font-normal text-slate-500">(click a change to accept/reject)</span></h2>
+        <div class="text-xs space-x-2"><button id="acceptAll" class="underline">accept all</button><button id="rejectAll" class="underline">reject all</button></div>
+      </div>
+      <pre id="diff" class="out text-sm border rounded p-2 min-h-[6rem]"></pre>
+    </section>
+    <section class="bg-white rounded-xl shadow p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="font-semibold">4. Clean draft</h2>
+        <div class="flex items-center gap-3 text-sm">
+          <span>Score after: <span id="scoreAfter" class="font-bold text-lg">0</span>/100</span>
+          <button id="copyBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded">Copy</button>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500 mb-2">Not at zero? Some patterns, like "it's not X, it's Y", lists of three and repeated lines, are only flagged because there's no safe automatic fix that keeps your meaning, so that call is yours.</p>
+      <pre id="output" class="out text-sm border rounded p-2 min-h-[6rem] bg-emerald-50/40"></pre>
+      <div class="flex justify-between text-xs mt-1"><span id="counter"></span><span id="copied" class="text-emerald-700"></span></div>
+    </section>
+  </div>
+  <p class="text-xs text-slate-400 mt-4">Rule-based and deterministic. CleanDraft never invents content and does not claim to "bypass detectors". Items marked "flag only" need your own rewrite.</p>
+</div>
+
+<script id="engine">
+// ENGINE-START
+(function (root) {
+  'use strict';
+  var CATS = {
+    dashes: 'Em/en dashes', intro: 'Robotic intros', outro: 'Robotic outros & engagement bait',
+    transition: 'Filler transitions', buzzword: 'Buzzwords & clichés', hedging: 'Hedging',
+    contrast: '"Not X, but Y" framing', structure: 'Structure (rhythm & triads)', formatting: 'Formatting & emoji'
+  };
+  var WEIGHT = { dashes: 3, intro: 6, outro: 6, transition: 3, buzzword: 3, hedging: 2, contrast: 5, structure: 3, formatting: 1.5 };
+  var PRESETS = {
+    linkedin: { name: 'LinkedIn', limit: 3000, maxHashtags: 3, maxEmoji: 2 },
+    x: { name: 'X', limit: 280, maxHashtags: 1, maxEmoji: 1 }
+  };
+  function verb(m, base, ing, s) { return /ing$/i.test(m) ? ing : (s && /s$/i.test(m) ? s : base); }
+  function keepTopic(prefix) { return function (m) { return prefix + m[1] + ', '; }; }
+
+  // Rule: [id, category, regex, replacement (string | fn(match, ctx) | null = flag only), why]
+  // Order = priority: earlier rules win overlapping spans.
+  var R = [
+    // ---- formatting (hidden chars, markdown) ----
+    ['hidden', 'formatting', /[\u200B-\u200D\u2060\uFEFF\u00AD]/g, '', 'Invisible Unicode characters that come along when you paste AI output.'],
+    ['md-bold', 'formatting', /\*\*|__/g, '', 'LinkedIn/X show **markdown** as literal asterisks.'],
+    ['md-heading', 'formatting', /^#{1,6}[ \t]+/gm, '', 'Markdown headings show up as literal # signs.'],
+    // ---- robotic outros (whole sentence) ----
+    ['hope-helps', 'outro', /[^.!?\n]*\bi hope (?:this|that) (?:helps|was helpful|gives you)[^.!?\n]*[.!?]*/gi, '', 'Chatbot sign-off. Nobody ends a post like this.'],
+    ['feel-free', 'outro', /[^.!?\n]*\bfeel free to (?:reach out|ask|let me know|share)[^.!?\n]*[.!?]*/gi, '', 'Customer-support sign-off.'],
+    ['let-me-know', 'outro', /[^.!?\n]*\blet me know if you (?:have|need|want|'d like)[^.!?\n]*[.!?]*/gi, '', 'Assistant-style closer.'],
+    ['thoughts', 'outro', /\bwhat (?:are|do you think are) your thoughts\?[ \t]*(?:let me know in the comments[.!]*|drop them below[.!]*)?[ \t]*(?:👇|⬇️)?/gi, '', 'Generic engagement bait. Ask a specific question instead.'],
+    ['drop-comment', 'outro', /[^.!?\n]*\bdrop (?:your thoughts|a comment)(?: below| in the comments)?[^.!?\n]*[.!?]*[ \t]*(?:👇|⬇️)?/gi, '', 'Generic engagement bait.'],
+    ['agree', 'outro', /(?:^|(?<=[.!?\s]))(?:agree|thoughts|sound familiar)\?[ \t]*(?:👇|⬇️)?(?=[ \t]*(?:#|$))/gim, '', 'One-word engagement-bait closer.'],
+    ['sink-in', 'outro', /\b(?:let that sink in|read that again)[.!]*/gi, '', 'Viral-post cliché.'],
+    // ---- robotic intros ----
+    ['certainly', 'intro', /\b(?:certainly|absolutely|sure|of course|great question)[!.,]\s*(?:here(?:'s| is| are)[^.:!\n]*[:.!]\s*)?/gi, '', 'Chatbot reply opener left in the post.'],
+    ['as-an-ai', 'intro', /\bas an ai(?: language model)?,?[ \t]*/gi, '', 'Literal AI disclaimer.'],
+    ['fast-paced', 'intro', /\bin today'?s (?:fast[- ]paced|digital|modern|ever[- ]changing|rapidly evolving|hyper[- ]connected|competitive) (?:world|age|era|landscape|business environment|market)(?: of [\w\s-]+?)?,[ \t]*/gi, '', 'The best-known AI opener. It says nothing.'],
+    ['landscape-of', 'intro', /\bin (?:the|this|an?) (?:ever[- ]evolving|ever[- ]changing|rapidly (?:evolving|changing)|dynamic|fast[- ]paced) (?:landscape|world|realm|field|space) of ([^,.\n]+),[ \t]*/gi, keepTopic('In '), '"Ever-evolving landscape" filler. Keeps your topic.'],
+    ['landscape', 'intro', /\bin (?:the|this|an?) (?:ever[- ]evolving|ever[- ]changing|rapidly (?:evolving|changing)|dynamic|fast[- ]paced) (?:landscape|world|realm|field|space|era|age),[ \t]*/gi, '', '"Ever-evolving landscape" filler.'],
+    ['realm-of', 'intro', /\bin the realm of ([^,.\n]+),[ \t]*/gi, keepTopic('In '), '"In the realm of" is AI padding.'],
+    ['when-it-comes', 'intro', /\bwhen it comes to ([^,.\n]+),[ \t]*/gi, keepTopic('For '), 'Wordy AI lead-in. Keeps your topic.'],
+    ['dive-in', 'intro', /\b(?:so,?\s*)?let'?s (?:dive|jump|delve|dig) (?:right )?in(?:to (?:it|this|the details))?[.!:]?[ \t]*/gi, '', '"Let\'s dive in" is a robotic transition.'],
+    ['ado', 'intro', /\b(?:without further ado|buckle up|picture this|imagine this)[,.!:][ \t]*/gi, '', 'Stock hook phrase.'],
+    ['heres-thing', 'intro', /\bhere'?s the (?:thing|kicker|truth)[:.,][ \t]*/gi, '', 'Stock hook phrase.'],
+    ['important-note', 'intro', /\bit(?:'s| is) (?:important|worth|crucial|essential|vital) (?:to note|noting|to remember|to mention|to highlight|to understand|to recognize) that[ \t]*/gi, '', 'Throat-clearing. Just say the thing.'],
+    ['important-note2', 'intro', /\bit(?:'s| is) (?:important|worth|crucial|essential|vital) (?:to note|noting|to remember|to mention)[,.]?[ \t]*/gi, '', 'Throat-clearing.'],
+    ['goes-without', 'intro', /\b(?:it goes without saying that|needless to say,?)[ \t]*/gi, '', 'If it goes without saying, don\'t say it.'],
+    // ---- filler transitions ----
+    ['conclusion', 'transition', /\b(?:in conclusion|in summary|to sum (?:it )?up|at the end of the day|ultimately|that being said|with that (?:being )?said|first and foremost|last but not least),[ \t]*/gi, '', 'Essay-style signpost. Posts don\'t need them.'],
+    ['conclusion2', 'transition', /\b(?:in conclusion|in summary)[ \t]+/gi, '', 'Essay-style signpost.'],
+    ['moreover', 'transition', /\b(?:furthermore|moreover|additionally|consequently|notably|importantly|interestingly|indeed|thus|hence),[ \t]*/gi, '', 'Formal connector that LLMs overuse.'],
+    // ---- hedging ----
+    ['could-argued', 'hedging', /\bit (?:could|can) be argued that[ \t]*/gi, '', 'Hedge. Own the opinion.'],
+    ['may-potentially', 'hedging', /\b(may|might|could|can) potentially\b/gi, function (m) { return m[1]; }, 'Double hedge.'],
+    ['arguably', 'hedging', /\b(?:arguably|to some extent|in many ways|in a sense),[ \t]*/gi, '', 'Softener that weakens the point.'],
+    ['it-seems', 'hedging', /\bit (?:seems|appears) that[ \t]*/gi, '', 'Hedge. State it.'],
+    // ---- contrast framing ----
+    ['not-only', 'contrast', /\bnot only ([^,.;\n]{2,60}?),? but also\b/gi, function (m) { return m[1] + ' and'; }, '"Not only… but also" is a classic AI cadence.'],
+    ['not-x-its-y', 'contrast', /\b(?:it'?s|this is|that'?s|it is) not (?:just |only |merely )?(?:about )?[^.!?\n]{1,60}?[.,;]\s*(?:it'?s|this is|it is)\s+(?:about\s+)?[^.!?\n]{1,60}[.!?]?/gi, null, '"It\'s not X, it\'s Y" is the #1 LLM rhetorical tic. Say Y directly.'],
+    ['isnt-just', 'contrast', /\b(?:isn'?t|aren'?t|wasn'?t) (?:just|only|merely) [^.!?\n,]{1,50}[,;]?\s*(?:it'?s|they'?re|it was)\b/gi, null, '"Isn\'t just X, it\'s Y" framing.'],
+    ['not-but', 'contrast', /\bnot (?:just |only |merely )?[a-z][^.!?\n,]{1,40}, but [^.!?\n]{1,40}/gi, null, '"Not X, but Y" contrast. Fine once, robotic when repeated.'],
+    // ---- buzzwords (inline swaps) ----
+    ['unlock-power', 'buzzword', /\b(?:unlock|harness)(?:ing)? the (?:full )?(?:power|potential) of\b/gi, 'use', 'Marketing cliché.'],
+    ['navigate', 'buzzword', /\bnavigat(?:e|ing) the (?:complexities|intricacies|challenges) of\b/gi, function (m) { return verb(m[0], 'handle', 'handling'); }, '"Navigate the complexities" is AI filler.'],
+    ['delve', 'buzzword', /\bdelv(?:e|es|ed|ing)(?: (?:deep(?:er)? )?into)?\b/gi, function (m) { var w = m[0].toLowerCase(); var into = /into$/.test(w); var b = /delves/.test(w) ? 'looks' : /delved/.test(w) ? 'looked' : /delving/.test(w) ? 'looking' : 'look'; return into ? b + ' at' : (b === 'look' ? 'dig' : b.replace('look', 'dig')); }, '"Delve" is the most famous ChatGPT word.'],
+    ['game-changer', 'buzzword', /\b(?:a )?game[- ]changers?\b/gi, 'a big deal', 'Overused hype word.'],
+    ['game-changing', 'buzzword', /\bgame[- ]changing\b/gi, 'major', 'Overused hype word.'],
+    ['paradigm', 'buzzword', /\b(?:a )?paradigm shift\b/gi, 'a big change', 'Corporate cliché.'],
+    ['cutting-edge', 'buzzword', /\b(?:cutting[- ]edge|state[- ]of[- ]the[- ]art)\b/gi, 'modern', 'Hype adjective.'],
+    ['seamless', 'buzzword', /\bseamless(?:ly)?\b/gi, function (m) { return /ly$/i.test(m[0]) ? 'smoothly' : 'smooth'; }, 'LLM favorite adjective.'],
+    ['robust', 'buzzword', /\brobust\b/gi, 'solid', 'LLM favorite adjective.'],
+    ['leverage', 'buzzword', /\bleverag(?:e|es|ed|ing)\b/gi, function (m) { var w = m[0]; return /ing$/i.test(w) ? 'using' : /ed$/i.test(w) ? 'used' : /es$/i.test(w) ? 'uses' : 'use'; }, 'Corporate-speak for "use".'],
+    ['utilize', 'buzzword', /\butiliz(?:e|es|ed|ing)\b/gi, function (m) { var w = m[0]; return /ing$/i.test(w) ? 'using' : /ed$/i.test(w) ? 'used' : /es$/i.test(w) ? 'uses' : 'use'; }, '"Utilize" = "use".'],
+    ['synergy', 'buzzword', /\bsynerg(?:y|ies)\b/gi, 'teamwork', 'Corporate cliché.'],
+    ['testament', 'buzzword', /\b(?:a )?testament to\b/gi, 'proof of', 'LLM favorite phrase.'],
+    ['plethora', 'buzzword', /\ba (?:plethora|myriad) of\b/gi, function (m) { return /plethora/i.test(m[0]) ? 'lots of' : 'many'; }, 'Inflated vocabulary.'],
+    ['in-order-to', 'buzzword', /\bin order to\b/gi, 'to', 'Wordy. "To" is enough.'],
+    ['due-fact', 'buzzword', /\bdue to the fact that\b/gi, 'because', 'Wordy.'],
+    ['tapestry', 'buzzword', /\b(?:rich )?tapestry(?= of)/gi, 'mix', '"Tapestry" is an LLM tell.'],
+    ['embark', 'buzzword', /\bembark(?:ing)? on (?:a|an|the|this|your|our) (?:journey|path|quest) (?:of|to)\b/gi, 'start', 'Grandiose "journey" framing.'],
+    ['elevate', 'buzzword', /\belevat(?:e|es|ing)\b/gi, function (m) { var w = m[0]; return /ing$/i.test(w) ? 'improving' : /es$/i.test(w) ? 'improves' : 'improve'; }, 'Hype verb.'],
+    ['supercharge', 'buzzword', /\bsupercharge\b/gi, 'boost', 'Hype verb.'],
+    ['revolutionize', 'buzzword', /\brevolutioniz(?:e|ing)\b/gi, function (m) { return /ing$/i.test(m[0]) ? 'changing' : 'change'; }, 'Hype verb.'],
+    ['pivotal', 'buzzword', /\b(?:pivotal|paramount|transformative)\b/gi, function (m) { var w = m[0].toLowerCase(); return w === 'paramount' ? 'critical' : w === 'transformative' ? 'big' : 'key'; }, 'Inflated adjective.'],
+    ['foster', 'buzzword', /\bfoster(?:s|ing)?\b/gi, function (m) { return verb(m[0], 'build', 'building', 'builds'); }, 'LLM favorite verb.'],
+    ['empower', 'buzzword', /\bempower(?:s|ing)?\b/gi, function (m) { return verb(m[0], 'help', 'helping', 'helps'); }, 'Corporate-speak.'],
+    ['deep-dive', 'buzzword', /\bdeep dive\b/gi, 'close look', 'Cliché.'],
+    ['intensifier', 'buzzword', /\b(?:truly|incredibly|remarkably|undeniably) (?=\w)/gi, '', 'Empty intensifier.'],
+    // ---- structure (flag only) ----
+    ['triad', 'structure', /\b[\w'-]+(?: [\w'-]+){0,2}, [\w'-]+(?: [\w'-]+){0,2},? and [\w'-]+(?: [\w'-]+){0,2}\b/g, null, 'Rule-of-three list. LLMs default to triads. Cut to two or make it specific.']
+  ];
+
+  function dashRule(text, keepDashes) {
+    var out = [];
+    if (keepDashes) return out;
+    var paired = /[ \t]*\u2014[ \t]*([^\u2014\u2013.!?\n]{1,80}?)[ \t]*\u2014[ \t]*(?=[a-z])/g, m;
+    while ((m = paired.exec(text))) out.push({ start: m.index, end: m.index + m[0].length, rule: 'dash-pair', cat: 'dashes', repl: ', ' + m[1] + ', ', why: 'Paired em-dashes around an aside. Commas read more naturally.' });
+    var single = /[ \t]*[\u2014\u2013][ \t]*/g;
+    while ((m = single.exec(text))) {
+      var s = m.index, e = s + m[0].length, prev = text.slice(0, s), next = text.slice(e), r;
+      if (/\d$/.test(prev) && /^\d/.test(next)) r = '-';
+      else if (s === 0 || /\n$/.test(prev)) r = '- ';
+      else if (next === '' || /^\n/.test(next)) r = '.';
+      else if (/^[A-Z][a-z]/.test(next) && !/^I['\u2019]/.test(next)) r = '. ';
+      else r = ', ';
+      var en = m[0].indexOf('\u2013') !== -1;
+      out.push({ start: s, end: e, rule: en ? 'en-dash' : 'em-dash', cat: 'dashes', repl: r, why: en ? 'En dash used as punctuation.' : 'The em-dash is the most-cited ChatGPT tell.' });
+    }
+    return out;
+  }
+
+  var EMOJI = /(?:\p{Extended_Pictographic}|[\u2705\u2714\u274C\u27A1])(?:\uFE0F|\u200D\p{Extended_Pictographic})*/gu;
+  function presetRules(text, preset) {
+    var out = [], m, i = 0;
+    var emojis = [];
+    EMOJI.lastIndex = 0;
+    while ((m = EMOJI.exec(text))) emojis.push(m);
+    var kept = 0;
+    emojis.forEach(function (em) {
+      var end = em.index + em[0].length; if (text[end] === ' ') end++;
+      var bullet = em.index === 0 || text[em.index - 1] === '\n';
+      if (bullet) { out.push({ start: em.index, end: end, rule: 'emoji-bullet', cat: 'formatting', repl: '- ', why: 'Emoji bullets (✅ 🚀 👉) are a ChatGPT template tell. Plain dashes read as human.' }); return; }
+      if (kept < preset.maxEmoji) { kept++; return; }
+      out.push({ start: em.index, end: end, rule: 'emoji', cat: 'formatting', repl: '', why: 'Emoji spam (more than ' + preset.maxEmoji + ' for ' + preset.name + ').' });
+    });
+    var tags = []; var tagRe = /(^|[ \t])(#[A-Za-z][\w]*)/gm;
+    while ((m = tagRe.exec(text))) tags.push({ index: m.index + m[1].length, len: m[2].length });
+    if (tags.length > preset.maxHashtags) {
+      tags.slice(preset.maxHashtags).forEach(function (t) {
+        var s = t.index; if (s > 0 && text[s - 1] === ' ') s--;
+        out.push({ start: s, end: t.index + t.len, rule: 'hashtags', cat: 'formatting', repl: '', why: 'Hashtag spam (> ' + preset.maxHashtags + ' for ' + preset.name + ').' });
+      });
+    }
+    return out;
+  }
+
+  function sentences(text) {
+    return text.split(/(?<=[.!?])\s+|\n+/).map(function (s) { return s.trim(); }).filter(function (s) { return s.split(/\s+/).length >= 3; });
+  }
+  function rhythmFlag(text) {
+    var ss = sentences(text);
+    if (ss.length < 5) return null;
+    var lens = ss.map(function (s) { return s.split(/\s+/).length; });
+    var mean = lens.reduce(function (a, b) { return a + b; }, 0) / lens.length;
+    var sd = Math.sqrt(lens.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / lens.length);
+    var cv = sd / mean;
+    if (cv < 0.3) return { start: 0, end: 0, rule: 'uniform-length', cat: 'structure', repl: null, whole: true, excerpt: ss.length + ' sentences, avg ' + mean.toFixed(0) + ' words, variation ' + (cv * 100).toFixed(0) + '%', why: 'Sentences are all about the same length. Human writing mixes short punches with longer lines.' };
+    return null;
+  }
+
+  function overlaps(a, list) {
+    for (var i = 0; i < list.length; i++) { var b = list[i]; if (a.start < b.end && b.start < a.end) return true; }
+    return false;
+  }
+
+  function analyze(text, opts) {
+    opts = opts || {};
+    var preset = PRESETS[opts.preset] || PRESETS.linkedin;
+    text = String(text || '').replace(/\r\n?/g, '\n');
+    var fixes = [], flags = [];
+    var cand = dashRule(text, opts.keepDashes).concat(presetRules(text, preset));
+    R.forEach(function (r) {
+      var re = new RegExp(r[2].source, r[2].flags), m;
+      while ((m = re.exec(text))) {
+        if (m[0].length === 0) { re.lastIndex++; continue; }
+        var c = { start: m.index, end: m.index + m[0].length, rule: r[0], cat: r[1], why: r[4] };
+        if (r[3] === null) { c.repl = null; if (!overlaps(c, flags)) flags.push(c); continue; }
+        c.repl = typeof r[3] === 'function' ? r[3](m, { text: text }) : r[3];
+        cand.push(c);
+      }
+    });
+    // Resolve overlaps: whole-phrase removals (longest first) win, then the rest in priority order.
+    cand.filter(function (c) { return c.repl === '' && c.end - c.start > 3; })
+      .sort(function (a, b) { return (b.end - b.start) - (a.end - a.start); })
+      .forEach(function (c) { if (!overlaps(c, fixes)) fixes.push(c); });
+    cand.forEach(function (c) { if (fixes.indexOf(c) === -1 && !overlaps(c, fixes)) fixes.push(c); });
+    var rh = rhythmFlag(text); if (rh) flags.push(rh);
+    fixes.sort(function (a, b) { return a.start - b.start; });
+    flags.sort(function (a, b) { return a.start - b.start; });
+    fixes.forEach(function (c, i) { c.id = i; c.original = text.slice(c.start, c.end); c.accepted = true; });
+    flags.forEach(function (c) { if (!c.whole) c.original = text.slice(c.start, c.end); });
+    return { text: text, fixes: fixes, flags: flags, preset: preset, score: score(text, fixes, flags) };
+  }
+
+  function score(text, fixes, flags) {
+    var words = (text.match(/\S+/g) || []).length;
+    if (!words) return 0;
+    var raw = 0;
+    fixes.concat(flags).forEach(function (c) {
+      if (c.rule === 'hidden') { raw += 0.5; return; }
+      raw += WEIGHT[c.cat] || 2;
+    });
+    var density = raw * 100 / Math.max(words, 40);
+    return Math.min(100, Math.round(100 * (1 - Math.exp(-density / 25))));
+  }
+
+  function tidy(text) {
+    text = text.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/\u2026/g, '...');
+    text = text.replace(/[ \t]+/g, ' ');
+    text = text.replace(/ +\n/g, '\n').replace(/\n +/g, '\n');
+    text = text.replace(/ +([,.;:!?])/g, '$1');
+    text = text.replace(/,\s*,+/g, ',');
+    text = text.replace(/,\s*([.!?;:])/g, '$1');
+    text = text.replace(/([.!?])\s*,/g, '$1');
+    text = text.replace(/:\s*,\s*/g, ': ');
+    text = text.replace(/([^.])\.{2}(?!\.)/g, '$1.');
+    text = text.replace(/^[,;:.]\s*/gm, '');
+    text = text.replace(/([,;:])(?=[A-Za-z])/g, '$1 ');
+    text = text.replace(/\b([Aa]) (?=[aeiou]\w)/g, '$1n ');
+    text = text.replace(/\b([Aa])n (?=(?:big|smooth|solid|new|modern|major|key|close)\b)/g, '$1 ');
+    text = text.replace(/^([\s\-*•>"'(]*)([a-z])/gm, function (_, pre, c) { return pre + c.toUpperCase(); });
+    text = text.replace(/([.!?]["')\]]?\s+)([a-z])/g, function (m, p, c, off, str) {
+      var before = str.slice(Math.max(0, off - 8), off + 1);
+      if (/(?:\be\.g|\bi\.e|\betc|\bvs|\bapprox|\.\.)\.$/i.test(before)) return m;
+      return p + c.toUpperCase();
+    });
+    text = text.replace(/^[ \t]*[.,;:!?]+[ \t]*$/gm, '');
+    text = text.replace(/\n{3,}/g, '\n\n');
+    return text.trim();
+  }
+
+  function apply(result, acceptedIds) {
+    var text = result.text, out = '', pos = 0;
+    result.fixes.forEach(function (c) {
+      var ok = acceptedIds ? acceptedIds.indexOf(c.id) !== -1 : c.accepted;
+      if (!ok) return;
+      out += text.slice(pos, c.start) + c.repl; pos = c.end;
+    });
+    return tidy(out + text.slice(pos));
+  }
+
+  function clean(text, opts) {
+    var a = analyze(text, opts);
+    var cleaned = apply(a);
+    var after = analyze(cleaned, opts);
+    return { before: a.score, after: after.score, cleaned: cleaned, analysis: a, afterAnalysis: after };
+  }
+
+  var api = { analyze: analyze, apply: apply, clean: clean, tidy: tidy, CATS: CATS, PRESETS: PRESETS };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  root.CDEngine = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+// ENGINE-END
+</script>
+
+<script>
+(function () {
+  var E = window.CDEngine, $ = function (id) { return document.getElementById(id); };
+  var state = { preset: 'linkedin', analysis: null };
+  var SAMPLE = "In today's fast-paced world, personal branding is a game-changer for founders. Let's dive in.\n\nIt's important to note that consistency matters more than perfection — and most people quit too early. It's not about going viral. It's about showing up.\n\n✅ Post daily\n✅ Tell stories\n✅ Engage with comments\n\nFurthermore, you need to unlock the power of storytelling to truly stand out. In conclusion, start small, stay consistent, and delve into what your audience actually wants.\n\nI hope this helps! What are your thoughts? 👇\n\n#PersonalBranding #Founders #Growth #LinkedIn #Startups";
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function scoreColor(el, v) { el.textContent = v; el.className = 'font-bold text-lg ' + (v >= 60 ? 'text-red-600' : v >= 30 ? 'text-amber-600' : 'text-emerald-600'); }
+
+  function render() {
+    var text = $('input').value;
+    var a = state.analysis = E.analyze(text, { preset: state.preset, keepDashes: $('keepDashes').checked });
+    scoreColor($('scoreBefore'), a.score);
+    // highlighted original (fixes + non-overlapping flags)
+    var spans = a.fixes.slice();
+    a.flags.forEach(function (f) { if (!f.whole && !spans.some(function (s) { return f.start < s.end && s.start < f.end; })) spans.push(f); });
+    spans.sort(function (x, y) { return x.start - y.start; });
+    var h = '', pos = 0;
+    spans.forEach(function (s) { h += esc(a.text.slice(pos, s.start)) + '<span class="hl cat-' + s.cat + '" title="' + esc(E.CATS[s.cat] + ': ' + s.why) + '">' + esc(a.text.slice(s.start, s.end)) + '</span>'; pos = s.end; });
+    $('highlighted').innerHTML = h + esc(a.text.slice(pos));
+    // groups
+    var groups = {};
+    a.fixes.concat(a.flags).forEach(function (c) { (groups[c.cat] = groups[c.cat] || []).push(c); });
+    var g = Object.keys(E.CATS).filter(function (k) { return groups[k]; }).map(function (k) {
+      var items = groups[k].map(function (c) {
+        var ex = c.whole ? c.excerpt : '"' + c.original.trim().slice(0, 70) + (c.original.length > 70 ? '…' : '') + '"';
+        var fix = c.repl === null || c.repl === undefined ? '<span class="text-xs bg-slate-200 px-1 rounded">flag only</span>' : (c.repl.trim() ? '→ <b>' + esc(c.repl.trim()) + '</b>' : '→ <i>remove</i>');
+        return '<li class="py-0.5"><span class="font-mono text-xs">' + esc(ex) + '</span> ' + fix + '<div class="text-xs text-slate-500">' + esc(c.why) + '</div></li>';
+      }).join('');
+      return '<details open class="border rounded p-2"><summary class="cursor-pointer"><span class="hl cat-' + k + '">' + E.CATS[k] + '</span> <span class="text-slate-500">(' + groups[k].length + ')</span></summary><ul class="mt-1">' + items + '</ul></details>';
+    }).join('');
+    $('groups').innerHTML = g || '<p class="text-slate-400">' + (text.trim() ? 'No AI fingerprints found. 🎉' : 'Paste text to see what gives it away.') + '</p>';
+    renderDiff(); renderOutput();
+  }
+
+  function renderDiff() {
+    var a = state.analysis, h = '', pos = 0;
+    a.fixes.forEach(function (c) {
+      h += esc(a.text.slice(pos, c.start)) + '<span class="chgwrap ' + (c.accepted ? '' : 'rejected') + '" data-id="' + c.id + '" title="' + esc(c.why) + ' (click to ' + (c.accepted ? 'reject' : 'accept') + ')"><del class="chg">' + esc(c.original) + '</del>' + (c.repl ? '<ins class="chg">' + esc(c.repl) + '</ins>' : '') + '</span>';
+      pos = c.end;
+    });
+    $('diff').innerHTML = (h + esc(a.text.slice(pos))) || '<span class="text-slate-400">Changes appear here.</span>';
+  }
+
+  function renderOutput() {
+    var a = state.analysis, out = E.apply(a);
+    $('output').textContent = out;
+    scoreColor($('scoreAfter'), E.analyze(out, { preset: state.preset, keepDashes: $('keepDashes').checked }).score);
+    var lim = a.preset.limit, n = Array.from(out).length;
+    $('counter').innerHTML = '<span class="' + (n > lim ? 'text-red-600 font-semibold' : 'text-slate-500') + '">' + n + ' / ' + lim + ' characters (' + a.preset.name + ')' + (n > lim ? ', over the limit: trim before posting' : '') + '</span>';
+  }
+
+  $('diff').addEventListener('click', function (e) {
+    var w = e.target.closest('.chgwrap'); if (!w) return;
+    var c = state.analysis.fixes[+w.dataset.id]; c.accepted = !c.accepted; renderDiff(); renderOutput();
+  });
+  $('acceptAll').onclick = function () { state.analysis.fixes.forEach(function (c) { c.accepted = true; }); renderDiff(); renderOutput(); };
+  $('rejectAll').onclick = function () { state.analysis.fixes.forEach(function (c) { c.accepted = false; }); renderDiff(); renderOutput(); };
+  $('cleanBtn').onclick = render;
+  $('input').addEventListener('input', render);
+  $('keepDashes').addEventListener('change', render);
+  $('sample').onclick = function () { $('input').value = SAMPLE; render(); };
+  document.querySelectorAll('.preset').forEach(function (b) {
+    b.onclick = function () { state.preset = b.dataset.preset; paintPresets(); render(); };
+  });
+  function paintPresets() { document.querySelectorAll('.preset').forEach(function (b) { b.className = 'preset px-3 py-1 rounded border ' + (b.dataset.preset === state.preset ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white'); }); }
+  $('copyBtn').onclick = function () {
+    var t = $('output').textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { $('copied').textContent = 'Copied!'; }, function () {
+      var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); $('copied').textContent = 'Copied!';
+    });
+    setTimeout(function () { $('copied').textContent = ''; }, 1500);
+  };
+  if (location.hash === '#sample') $('input').value = SAMPLE;
+  paintPresets(); render();
+})();
+</script>
+</body>
+</html>
