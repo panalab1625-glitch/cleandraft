@@ -120,7 +120,7 @@
     ['landscape', 'intro', /\bin (?:the|this|an?) (?:ever[- ]evolving|ever[- ]changing|rapidly (?:evolving|changing)|dynamic|fast[- ]paced) (?:landscape|world|realm|field|space|era|age),[ \t]*/gi, '', '"Ever-evolving landscape" filler.'],
     ['realm-of', 'intro', /\bin the realm of ([^,.\n]+),[ \t]*/gi, keepTopic('In '), '"In the realm of" is AI padding.'],
     ['when-it-comes', 'intro', /\bwhen it comes to ([^,.\n]+),[ \t]*/gi, keepTopic('For '), 'Wordy AI lead-in. Keeps your topic.'],
-    ['dive-in', 'intro', /\b(?:so,?\s*)?let'?s (?:dive|jump|delve|dig) (?:right )?in(?:to (?:it|this|the details))?[.!:]?[ \t]*/gi, '', '"Let\'s dive in" is a robotic transition.'],
+    ['dive-in', 'intro', /\b(?:so,?\s*)?let'?s (?:dive|jump|delve|dig) (?:right )?in(?:to (?:it|this|the details))?\b[.!:]?[ \t]*/gi, '', '"Let\'s dive in" is a robotic transition.'],
     ['ado', 'intro', /\b(?:without further ado|buckle up|picture this|imagine this)[,.!:][ \t]*/gi, '', 'Stock hook phrase.'],
     ['heres-thing', 'intro', /\bhere'?s the (?:thing|kicker|truth)[:.,][ \t]*/gi, '', 'Stock hook phrase.'],
     ['important-note', 'intro', /\bit(?:'s| is) (?:important|worth|crucial|essential|vital) (?:to note|noting|to remember|to mention|to highlight|to understand|to recognize) that[ \t]*/gi, '', 'Throat-clearing. Just say the thing.'],
