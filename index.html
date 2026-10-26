@@ -1,412 +1,529 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CleanDraft v2 prototype: remove AI fingerprints</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  .hl { border-radius: 3px; padding: 0 1px; cursor: help; }
-  .cat-dashes{background:#fde68a}.cat-intro{background:#fecaca}.cat-outro{background:#fbcfe8}
-  .cat-transition{background:#ddd6fe}.cat-buzzword{background:#bfdbfe}.cat-hedging{background:#bbf7d0}
-  .cat-contrast{background:#fed7aa}.cat-structure{background:#e5e7eb;text-decoration:underline dotted}
-  .cat-formatting{background:#a5f3fc}
-  del.chg{background:#fee2e2;color:#991b1b;text-decoration:line-through}
-  ins.chg{background:#dcfce7;color:#166534;text-decoration:none}
-  .rejected del.chg{background:transparent;color:inherit;text-decoration:none}
-  .rejected ins.chg{display:none}
-  .chgwrap{cursor:pointer;border-bottom:1px dashed #9ca3af}
-  pre.out{white-space:pre-wrap;word-wrap:break-word;font-family:inherit}
-</style>
-  <link rel="icon" href="favicon.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CleanDraft.ai: Remove Em Dashes &amp; AI Clichés From Your Drafts</title>
+  <meta name="description" content="Paste a ChatGPT or Claude draft and CleanDraft strips em dashes, robotic intros and overused AI phrases like “delve into” before you post on LinkedIn or X. Runs in your browser. 10 free cleanups.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%238b5cf6%22/%3E%3Ctext x=%2216%22 y=%2222%22 font-size=%2216%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22bold%22%3ECD%3C/text%3E%3C/svg%3E">
+  <meta name="theme-color" content="#090d16">
+  <meta property="og:title" content="CleanDraft.ai: Remove AI fingerprints from your drafts">
+  <meta property="og:description" content="Strip em dashes, robotic intros and AI clichés in one click. Text is processed in your browser.">
+  <meta property="og:type" content="website">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        colors: { darkbg: '#090d16', cardbg: '#0f172a', cardborder: '#1e293b', brandpurple: '#8b5cf6', brandindigo: '#6366f1' }
+      } }
+    };
+  </script>
+  <style>
+    html, body { overflow-x: hidden; }
+    body { background-color: #090d16; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; }
+    .glow-effect { box-shadow: 0 0 50px -10px rgba(139, 92, 246, 0.25); }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .faq-chevron { transform: rotate(180deg); }
+    #toast { transition: opacity .2s ease, transform .2s ease; }
+    :focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800">
-<div class="max-w-7xl mx-auto p-4 md:p-6">
-  <header class="flex flex-wrap items-center justify-between gap-3 mb-4">
-    <div>
-      <h1 class="text-2xl font-bold">CleanDraft <span class="text-indigo-600">v2</span> <span class="text-xs align-middle bg-amber-100 text-amber-800 px-2 py-0.5 rounded">prototype</span></h1>
-      <p class="text-sm text-slate-500">Sounds like you, not like ChatGPT. Runs 100% in your browser, so nothing is uploaded.</p>
-    </div>
-    <div class="flex items-center gap-2 text-sm">
-      <span class="font-medium">Platform:</span>
-      <button data-preset="linkedin" class="preset px-3 py-1 rounded border">LinkedIn</button>
-      <button data-preset="x" class="preset px-3 py-1 rounded border">X</button>
-      <label class="ml-3 flex items-center gap-1"><input type="checkbox" id="keepDashes"> keep my dashes</label>
+<body class="min-h-screen flex flex-col selection:bg-purple-500 selection:text-white">
+  <a href="#editor" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] bg-brandpurple text-white px-3 py-2 rounded-lg">Skip to the tool</a>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-50 backdrop-blur-md bg-darkbg/80 border-b border-cardborder">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <a href="#" class="flex items-center gap-2 min-w-0" aria-label="CleanDraft.ai home">
+        <span class="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-tr from-brandpurple to-brandindigo flex items-center justify-center text-white shadow-lg" aria-hidden="true">
+          <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+        </span>
+        <span class="font-extrabold text-xl tracking-tight text-white">CleanDraft<span class="text-brandpurple">.ai</span></span>
+      </a>
+      <nav aria-label="Main" class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+        <a href="#editor" class="hover:text-white transition-colors">Tool</a>
+        <a href="#comparison" class="hover:text-white transition-colors">Before / After</a>
+        <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
+        <a href="#faq" class="hover:text-white transition-colors">FAQ</a>
+      </nav>
+      <a href="#editor" class="shrink-0 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-brandpurple to-brandindigo hover:opacity-90 transition-all rounded-lg shadow-md hover:shadow-purple-500/20">Try it free</a>
     </div>
   </header>
 
-  <section aria-labelledby="unlimited-heading" class="bg-white rounded-xl shadow p-4 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-    <div>
-      <h2 id="unlimited-heading" class="font-semibold">CleanDraft Unlimited</h2>
-      <p class="text-sm text-slate-500">Free for the first 10 cleanups, then $9/month for unlimited use.</p>
+  <main class="flex-1">
+  <!-- HERO -->
+  <section class="relative pt-16 pb-10 md:pt-28 md:pb-16 px-4 text-center overflow-hidden">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-purple-900/25 via-transparent to-transparent -z-10" aria-hidden="true"></div>
+    <div class="max-w-4xl mx-auto">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium mb-8">
+        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+        <span>Your text is processed in your browser</span>
+      </div>
+      <h1 class="text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-tight mb-6">
+        Post drafts that don't read like <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400">ChatGPT wrote them</span>
+      </h1>
+      <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        CleanDraft strips em dashes, robotic intros and overused AI phrases (“delve into”, “a testament to”, “in today's fast-paced world”) from your ChatGPT or Claude drafts in one click, before you post on LinkedIn or X.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="#editor" class="w-full sm:w-auto px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-brandpurple to-brandindigo rounded-xl shadow-lg hover:shadow-purple-500/30 transition-all hover:-translate-y-0.5">
+          Clean your draft <i class="fa-solid fa-arrow-down ml-2" aria-hidden="true"></i>
+        </a>
+        <a href="#comparison" class="w-full sm:w-auto px-8 py-4 text-base font-semibold text-slate-200 bg-slate-800/70 border border-slate-700 hover:bg-slate-800 rounded-xl transition-all">
+          See an example
+        </a>
+      </div>
+      <p class="mt-5 text-xs text-slate-500"><span data-free-total>10</span> free cleanups. No sign-up.</p>
     </div>
-    <a href="https://cleandraftai.lemonsqueezy.com/checkout/buy/bcd88493-3b8f-48da-9ab8-559c587a4cde" target="_blank" rel="noopener" class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-medium text-sm text-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Get CleanDraft Unlimited, $9/month<span class="sr-only"> (opens in a new tab)</span></a>
   </section>
 
-  <div class="grid md:grid-cols-2 gap-4">
-    <section class="bg-white rounded-xl shadow p-4">
-      <div class="flex justify-between items-center mb-2">
-        <h2 class="font-semibold">1. Paste your AI draft</h2>
-        <button id="sample" class="text-xs text-indigo-600 underline">load sample</button>
-      </div>
-      <textarea id="input" class="w-full h-56 border rounded p-2 text-sm" placeholder="Paste a ChatGPT / Claude draft here…"></textarea>
-      <div class="flex items-center justify-between mt-2">
-        <div class="text-sm">AI fingerprint score: <span id="scoreBefore" class="font-bold text-lg">0</span>/100</div>
-        <button id="cleanBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-medium">Clean it</button>
-      </div>
-      <h3 class="font-semibold mt-4 mb-1 text-sm">Highlighted fingerprints</h3>
-      <pre id="highlighted" class="out text-sm border rounded p-2 bg-slate-50 min-h-[4rem]"></pre>
-    </section>
-
-    <section class="bg-white rounded-xl shadow p-4">
-      <h2 class="font-semibold mb-2">2. Detected patterns</h2>
-      <div id="groups" class="space-y-2 text-sm max-h-[30rem] overflow-auto"><p class="text-slate-400">Paste text to see what gives it away.</p></div>
-    </section>
-  </div>
-
-  <div class="grid md:grid-cols-2 gap-4 mt-4">
-    <section class="bg-white rounded-xl shadow p-4">
-      <div class="flex justify-between items-center mb-2">
-        <h2 class="font-semibold">3. Review changes <span class="text-xs font-normal text-slate-500">(click a change to accept/reject)</span></h2>
-        <div class="text-xs space-x-2"><button id="acceptAll" class="underline">accept all</button><button id="rejectAll" class="underline">reject all</button></div>
-      </div>
-      <pre id="diff" class="out text-sm border rounded p-2 min-h-[6rem]"></pre>
-    </section>
-    <section class="bg-white rounded-xl shadow p-4">
-      <div class="flex justify-between items-center mb-2">
-        <h2 class="font-semibold">4. Clean draft</h2>
-        <div class="flex items-center gap-3 text-sm">
-          <span>Score after: <span id="scoreAfter" class="font-bold text-lg">0</span>/100</span>
-          <button id="copyBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded">Copy</button>
+  <!-- TOOL -->
+  <section id="editor" class="py-10 px-4 max-w-7xl mx-auto w-full scroll-mt-20" aria-labelledby="tool-title">
+    <div class="bg-cardbg border border-cardborder rounded-2xl p-4 sm:p-6 md:p-8 glow-effect">
+      <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-cardborder gap-4">
+        <div>
+          <h2 id="tool-title" class="text-xl font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-brandpurple" aria-hidden="true"></i> Clean your AI draft
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Paste a ChatGPT or Claude draft. CleanDraft finds the tells and fixes them.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button id="loadSampleBtn" type="button" class="px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-file-lines text-purple-400" aria-hidden="true"></i> Load sample
+          </button>
+          <button id="clearBtn" type="button" class="px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-eraser text-purple-400" aria-hidden="true"></i> Clear
+          </button>
+          <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-cardborder text-xs font-medium text-slate-300" aria-live="polite">
+            Free cleanups left: <span id="cleanupCounter" class="font-bold text-brandpurple">10</span> of <span data-free-total>10</span>
+          </div>
         </div>
       </div>
-      <p class="text-xs text-slate-500 mb-2">Not at zero? Some patterns, like "it's not X, it's Y", lists of three and repeated lines, are only flagged because there's no safe automatic fix that keeps your meaning, so that call is yours.</p>
-      <pre id="output" class="out text-sm border rounded p-2 min-h-[6rem] bg-emerald-50/40"></pre>
-      <div class="flex justify-between text-xs mt-1"><span id="counter"></span><span id="copied" class="text-emerald-700"></span></div>
-    </section>
-  </div>
-  <p class="text-xs text-slate-400 mt-4">Rule-based and deterministic. CleanDraft never invents content and does not claim to "bypass detectors". Items marked "flag only" need your own rewrite.</p>
-</div>
 
-<script id="engine">
-// ENGINE-START
-(function (root) {
-  'use strict';
-  var CATS = {
-    dashes: 'Em/en dashes', intro: 'Robotic intros', outro: 'Robotic outros & engagement bait',
-    transition: 'Filler transitions', buzzword: 'Buzzwords & clichés', hedging: 'Hedging',
-    contrast: '"Not X, but Y" framing', structure: 'Structure (rhythm & triads)', formatting: 'Formatting & emoji'
-  };
-  var WEIGHT = { dashes: 3, intro: 6, outro: 6, transition: 3, buzzword: 3, hedging: 2, contrast: 5, structure: 3, formatting: 1.5 };
-  var PRESETS = {
-    linkedin: { name: 'LinkedIn', limit: 3000, maxHashtags: 3, maxEmoji: 2 },
-    x: { name: 'X', limit: 280, maxHashtags: 1, maxEmoji: 1 }
-  };
-  function verb(m, base, ing, s) { return /ing$/i.test(m) ? ing : (s && /s$/i.test(m) ? s : base); }
-  function keepTopic(prefix) { return function (m) { return prefix + m[1] + ', '; }; }
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <div class="flex flex-col min-w-0">
+          <div class="flex items-center justify-between mb-2 gap-2">
+            <label for="inputText" class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Your AI draft</label>
+            <span class="text-xs text-slate-400 whitespace-nowrap">AI tells: <span id="scoreBefore" class="font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">0/100</span></span>
+          </div>
+          <textarea id="inputText" placeholder="Paste your draft here..." spellcheck="true" class="w-full h-72 p-4 bg-darkbg border border-cardborder rounded-xl text-slate-200 text-sm focus:outline-none focus:border-purple-500 resize-y custom-scrollbar leading-relaxed"></textarea>
+          <p class="mt-2 text-[11px] text-slate-500"><span id="wordCount">0</span> words · Tip: Ctrl/⌘ + Enter to clean</p>
+        </div>
 
-  // Rule: [id, category, regex, replacement (string | fn(match, ctx) | null = flag only), why]
-  // Order = priority: earlier rules win overlapping spans.
-  var R = [
-    // ---- formatting (hidden chars, markdown) ----
-    ['hidden', 'formatting', /[\u200B-\u200D\u2060\uFEFF\u00AD]/g, '', 'Invisible Unicode characters that come along when you paste AI output.'],
-    ['md-bold', 'formatting', /\*\*|__/g, '', 'LinkedIn/X show **markdown** as literal asterisks.'],
-    ['md-heading', 'formatting', /^#{1,6}[ \t]+/gm, '', 'Markdown headings show up as literal # signs.'],
-    // ---- robotic outros (whole sentence) ----
-    ['hope-helps', 'outro', /[^.!?\n]*\bi hope (?:this|that) (?:helps|was helpful|gives you)[^.!?\n]*[.!?]*/gi, '', 'Chatbot sign-off. Nobody ends a post like this.'],
-    ['feel-free', 'outro', /[^.!?\n]*\bfeel free to (?:reach out|ask|let me know|share)[^.!?\n]*[.!?]*/gi, '', 'Customer-support sign-off.'],
-    ['let-me-know', 'outro', /[^.!?\n]*\blet me know if you (?:have|need|want|'d like)[^.!?\n]*[.!?]*/gi, '', 'Assistant-style closer.'],
-    ['thoughts', 'outro', /\bwhat (?:are|do you think are) your thoughts\?[ \t]*(?:let me know in the comments[.!]*|drop them below[.!]*)?[ \t]*(?:👇|⬇️)?/gi, '', 'Generic engagement bait. Ask a specific question instead.'],
-    ['drop-comment', 'outro', /[^.!?\n]*\bdrop (?:your thoughts|a comment)(?: below| in the comments)?[^.!?\n]*[.!?]*[ \t]*(?:👇|⬇️)?/gi, '', 'Generic engagement bait.'],
-    ['agree', 'outro', /(?:^|(?<=[.!?\s]))(?:agree|thoughts|sound familiar)\?[ \t]*(?:👇|⬇️)?(?=[ \t]*(?:#|$))/gim, '', 'One-word engagement-bait closer.'],
-    ['sink-in', 'outro', /\b(?:let that sink in|read that again)[.!]*/gi, '', 'Viral-post cliché.'],
-    // ---- robotic intros ----
-    ['certainly', 'intro', /\b(?:certainly|absolutely|sure|of course|great question)[!.,]\s*(?:here(?:'s| is| are)[^.:!\n]*[:.!]\s*)?/gi, '', 'Chatbot reply opener left in the post.'],
-    ['as-an-ai', 'intro', /\bas an ai(?: language model)?,?[ \t]*/gi, '', 'Literal AI disclaimer.'],
-    ['fast-paced', 'intro', /\bin today'?s (?:fast[- ]paced|digital|modern|ever[- ]changing|rapidly evolving|hyper[- ]connected|competitive) (?:world|age|era|landscape|business environment|market)(?: of [\w\s-]+?)?,[ \t]*/gi, '', 'The best-known AI opener. It says nothing.'],
-    ['landscape-of', 'intro', /\bin (?:the|this|an?) (?:ever[- ]evolving|ever[- ]changing|rapidly (?:evolving|changing)|dynamic|fast[- ]paced) (?:landscape|world|realm|field|space) of ([^,.\n]+),[ \t]*/gi, keepTopic('In '), '"Ever-evolving landscape" filler. Keeps your topic.'],
-    ['landscape', 'intro', /\bin (?:the|this|an?) (?:ever[- ]evolving|ever[- ]changing|rapidly (?:evolving|changing)|dynamic|fast[- ]paced) (?:landscape|world|realm|field|space|era|age),[ \t]*/gi, '', '"Ever-evolving landscape" filler.'],
-    ['realm-of', 'intro', /\bin the realm of ([^,.\n]+),[ \t]*/gi, keepTopic('In '), '"In the realm of" is AI padding.'],
-    ['when-it-comes', 'intro', /\bwhen it comes to ([^,.\n]+),[ \t]*/gi, keepTopic('For '), 'Wordy AI lead-in. Keeps your topic.'],
-    ['dive-in', 'intro', /\b(?:so,?\s*)?let'?s (?:dive|jump|delve|dig) (?:right )?in(?:to (?:it|this|the details))?\b[.!:]?[ \t]*/gi, '', '"Let\'s dive in" is a robotic transition.'],
-    ['ado', 'intro', /\b(?:without further ado|buckle up|picture this|imagine this)[,.!:][ \t]*/gi, '', 'Stock hook phrase.'],
-    ['heres-thing', 'intro', /\bhere'?s the (?:thing|kicker|truth)[:.,][ \t]*/gi, '', 'Stock hook phrase.'],
-    ['important-note', 'intro', /\bit(?:'s| is) (?:important|worth|crucial|essential|vital) (?:to note|noting|to remember|to mention|to highlight|to understand|to recognize) that[ \t]*/gi, '', 'Throat-clearing. Just say the thing.'],
-    ['important-note2', 'intro', /\bit(?:'s| is) (?:important|worth|crucial|essential|vital) (?:to note|noting|to remember|to mention)[,.]?[ \t]*/gi, '', 'Throat-clearing.'],
-    ['goes-without', 'intro', /\b(?:it goes without saying that|needless to say,?)[ \t]*/gi, '', 'If it goes without saying, don\'t say it.'],
-    // ---- filler transitions ----
-    ['conclusion', 'transition', /\b(?:in conclusion|in summary|to sum (?:it )?up|at the end of the day|ultimately|that being said|with that (?:being )?said|first and foremost|last but not least),[ \t]*/gi, '', 'Essay-style signpost. Posts don\'t need them.'],
-    ['conclusion2', 'transition', /\b(?:in conclusion|in summary)[ \t]+/gi, '', 'Essay-style signpost.'],
-    ['moreover', 'transition', /\b(?:furthermore|moreover|additionally|consequently|notably|importantly|interestingly|indeed|thus|hence),[ \t]*/gi, '', 'Formal connector that LLMs overuse.'],
-    // ---- hedging ----
-    ['could-argued', 'hedging', /\bit (?:could|can) be argued that[ \t]*/gi, '', 'Hedge. Own the opinion.'],
-    ['may-potentially', 'hedging', /\b(may|might|could|can) potentially\b/gi, function (m) { return m[1]; }, 'Double hedge.'],
-    ['arguably', 'hedging', /\b(?:arguably|to some extent|in many ways|in a sense),[ \t]*/gi, '', 'Softener that weakens the point.'],
-    ['it-seems', 'hedging', /\bit (?:seems|appears) that[ \t]*/gi, '', 'Hedge. State it.'],
-    // ---- contrast framing ----
-    ['not-only', 'contrast', /\bnot only ([^,.;\n]{2,60}?),? but also\b/gi, function (m) { return m[1] + ' and'; }, '"Not only… but also" is a classic AI cadence.'],
-    ['not-x-its-y', 'contrast', /\b(?:it'?s|this is|that'?s|it is) not (?:just |only |merely )?(?:about )?[^.!?\n]{1,60}?[.,;]\s*(?:it'?s|this is|it is)\s+(?:about\s+)?[^.!?\n]{1,60}[.!?]?/gi, null, '"It\'s not X, it\'s Y" is the #1 LLM rhetorical tic. Say Y directly.'],
-    ['isnt-just', 'contrast', /\b(?:isn'?t|aren'?t|wasn'?t) (?:just|only|merely) [^.!?\n,]{1,50}[,;]?\s*(?:it'?s|they'?re|it was)\b/gi, null, '"Isn\'t just X, it\'s Y" framing.'],
-    ['not-but', 'contrast', /\bnot (?:just |only |merely )?[a-z][^.!?\n,]{1,40}, but [^.!?\n]{1,40}/gi, null, '"Not X, but Y" contrast. Fine once, robotic when repeated.'],
-    // ---- buzzwords (inline swaps) ----
-    ['unlock-power', 'buzzword', /\b(?:unlock|harness)(?:ing)? the (?:full )?(?:power|potential) of\b/gi, 'use', 'Marketing cliché.'],
-    ['navigate', 'buzzword', /\bnavigat(?:e|ing) the (?:complexities|intricacies|challenges) of\b/gi, function (m) { return verb(m[0], 'handle', 'handling'); }, '"Navigate the complexities" is AI filler.'],
-    ['delve', 'buzzword', /\bdelv(?:e|es|ed|ing)(?: (?:deep(?:er)? )?into)?\b/gi, function (m) { var w = m[0].toLowerCase(); var into = /into$/.test(w); var b = /delves/.test(w) ? 'looks' : /delved/.test(w) ? 'looked' : /delving/.test(w) ? 'looking' : 'look'; return into ? b + ' at' : (b === 'look' ? 'dig' : b.replace('look', 'dig')); }, '"Delve" is the most famous ChatGPT word.'],
-    ['game-changer', 'buzzword', /\b(?:a )?game[- ]changers?\b/gi, 'a big deal', 'Overused hype word.'],
-    ['game-changing', 'buzzword', /\bgame[- ]changing\b/gi, 'major', 'Overused hype word.'],
-    ['paradigm', 'buzzword', /\b(?:a )?paradigm shift\b/gi, 'a big change', 'Corporate cliché.'],
-    ['cutting-edge', 'buzzword', /\b(?:cutting[- ]edge|state[- ]of[- ]the[- ]art)\b/gi, 'modern', 'Hype adjective.'],
-    ['seamless', 'buzzword', /\bseamless(?:ly)?\b/gi, function (m) { return /ly$/i.test(m[0]) ? 'smoothly' : 'smooth'; }, 'LLM favorite adjective.'],
-    ['robust', 'buzzword', /\brobust\b/gi, 'solid', 'LLM favorite adjective.'],
-    ['leverage', 'buzzword', /\bleverag(?:e|es|ed|ing)\b/gi, function (m) { var w = m[0]; return /ing$/i.test(w) ? 'using' : /ed$/i.test(w) ? 'used' : /es$/i.test(w) ? 'uses' : 'use'; }, 'Corporate-speak for "use".'],
-    ['utilize', 'buzzword', /\butiliz(?:e|es|ed|ing)\b/gi, function (m) { var w = m[0]; return /ing$/i.test(w) ? 'using' : /ed$/i.test(w) ? 'used' : /es$/i.test(w) ? 'uses' : 'use'; }, '"Utilize" = "use".'],
-    ['synergy', 'buzzword', /\bsynerg(?:y|ies)\b/gi, 'teamwork', 'Corporate cliché.'],
-    ['testament', 'buzzword', /\b(?:a )?testament to\b/gi, 'proof of', 'LLM favorite phrase.'],
-    ['plethora', 'buzzword', /\ba (?:plethora|myriad) of\b/gi, function (m) { return /plethora/i.test(m[0]) ? 'lots of' : 'many'; }, 'Inflated vocabulary.'],
-    ['in-order-to', 'buzzword', /\bin order to\b/gi, 'to', 'Wordy. "To" is enough.'],
-    ['due-fact', 'buzzword', /\bdue to the fact that\b/gi, 'because', 'Wordy.'],
-    ['tapestry', 'buzzword', /\b(?:rich )?tapestry(?= of)/gi, 'mix', '"Tapestry" is an LLM tell.'],
-    ['embark', 'buzzword', /\bembark(?:ing)? on (?:a|an|the|this|your|our) (?:journey|path|quest) (?:of|to)\b/gi, 'start', 'Grandiose "journey" framing.'],
-    ['elevate', 'buzzword', /\belevat(?:e|es|ing)\b/gi, function (m) { var w = m[0]; return /ing$/i.test(w) ? 'improving' : /es$/i.test(w) ? 'improves' : 'improve'; }, 'Hype verb.'],
-    ['supercharge', 'buzzword', /\bsupercharge\b/gi, 'boost', 'Hype verb.'],
-    ['revolutionize', 'buzzword', /\brevolutioniz(?:e|ing)\b/gi, function (m) { return /ing$/i.test(m[0]) ? 'changing' : 'change'; }, 'Hype verb.'],
-    ['pivotal', 'buzzword', /\b(?:pivotal|paramount|transformative)\b/gi, function (m) { var w = m[0].toLowerCase(); return w === 'paramount' ? 'critical' : w === 'transformative' ? 'big' : 'key'; }, 'Inflated adjective.'],
-    ['foster', 'buzzword', /\bfoster(?:s|ing)?\b/gi, function (m) { return verb(m[0], 'build', 'building', 'builds'); }, 'LLM favorite verb.'],
-    ['empower', 'buzzword', /\bempower(?:s|ing)?\b/gi, function (m) { return verb(m[0], 'help', 'helping', 'helps'); }, 'Corporate-speak.'],
-    ['deep-dive', 'buzzword', /\bdeep dive\b/gi, 'close look', 'Cliché.'],
-    ['intensifier', 'buzzword', /\b(?:truly|incredibly|remarkably|undeniably) (?=\w)/gi, '', 'Empty intensifier.'],
-    // ---- structure (flag only) ----
-    ['triad', 'structure', /\b[\w'-]+(?: [\w'-]+){0,2}, [\w'-]+(?: [\w'-]+){0,2},? and [\w'-]+(?: [\w'-]+){0,2}\b/g, null, 'Rule-of-three list. LLMs default to triads. Cut to two or make it specific.']
+        <div class="flex flex-col min-w-0">
+          <div class="flex items-center justify-between mb-2 gap-2">
+            <span id="outputLabel" class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Cleaned draft</span>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-slate-400 whitespace-nowrap">After: <span id="scoreAfter" class="font-bold px-2 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20">–</span></span>
+              <button id="copyBtn" type="button" disabled aria-label="Copy cleaned text" class="text-xs font-medium text-purple-400 hover:text-purple-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1">
+                <i class="fa-regular fa-copy" aria-hidden="true"></i> Copy
+              </button>
+            </div>
+          </div>
+          <div id="outputText" role="region" aria-labelledby="outputLabel" aria-live="polite" tabindex="0" class="w-full h-72 p-4 bg-darkbg/50 border border-cardborder rounded-xl text-slate-200 text-sm overflow-y-auto custom-scrollbar leading-relaxed whitespace-pre-wrap break-words"><span class="text-slate-500 italic">Your cleaned draft will appear here.</span></div>
+          <div id="changesBox" class="mt-3 hidden">
+            <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">What changed</h3>
+            <ul id="changesList" class="flex flex-wrap gap-2 text-xs"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div id="limitBox" class="hidden mt-6 p-4 rounded-xl border border-brandpurple/40 bg-purple-500/10 text-sm text-slate-200" role="alert">
+        You've used all <span data-free-total>10</span> free cleanups in this browser.
+        <a href="#pricing" class="font-semibold text-purple-300 underline underline-offset-2 hover:text-white">Get CleanDraft Unlimited for $9/month</a> to keep cleaning.
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-cardborder flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p id="statsBanner" class="text-xs text-slate-400" aria-live="polite">Ready to clean your text.</p>
+        <button id="cleanBtn" type="button" class="w-full sm:w-auto px-8 py-3 text-sm font-semibold text-white bg-gradient-to-r from-brandpurple to-brandindigo rounded-xl shadow-md hover:shadow-purple-500/20 transition-all disabled:opacity-50">
+          Clean draft <i class="fa-solid fa-wand-magic-sparkles ml-1" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IT CATCHES -->
+  <section class="py-10 px-4 max-w-7xl mx-auto w-full" aria-labelledby="catches-title">
+    <h2 id="catches-title" class="text-2xl font-bold text-white text-center mb-8">What CleanDraft catches</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+      <div class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <i class="fa-solid fa-minus text-brandpurple mb-3" aria-hidden="true"></i>
+        <h3 class="font-semibold text-white mb-1">Em dashes</h3>
+        <p class="text-slate-400">Swapped for a comma, period or colon depending on the sentence, not a lazy hyphen.</p>
+      </div>
+      <div class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <i class="fa-solid fa-robot text-brandpurple mb-3" aria-hidden="true"></i>
+        <h3 class="font-semibold text-white mb-1">Robotic intros</h3>
+        <p class="text-slate-400">“Certainly!”, “Sure!”, “Great question!”, “Here's a LinkedIn post…:” and “I hope this helps!”</p>
+      </div>
+      <div class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <i class="fa-solid fa-language text-brandpurple mb-3" aria-hidden="true"></i>
+        <h3 class="font-semibold text-white mb-1">AI vocabulary</h3>
+        <p class="text-slate-400">delve, testament to, tapestry, game-changer, leverage, unlock, landscape, seamless, pivotal.</p>
+      </div>
+      <div class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <i class="fa-solid fa-diagram-project text-brandpurple mb-3" aria-hidden="true"></i>
+        <h3 class="font-semibold text-white mb-1">Stock structures</h3>
+        <p class="text-slate-400">“In today's fast-paced world”, “It's not just X, it's Y”, Furthermore / Moreover / Additionally.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BEFORE / AFTER -->
+  <section id="comparison" class="py-14 px-4 max-w-7xl mx-auto w-full scroll-mt-20" aria-labelledby="cmp-title">
+    <div class="text-center mb-10">
+      <h2 id="cmp-title" class="text-3xl font-bold text-white mb-3">Notice the difference</h2>
+      <p class="text-slate-400 text-sm max-w-xl mx-auto">A real example. The right side is exactly what the engine on this page outputs for the draft on the left.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+      <div class="bg-cardbg/50 border border-red-500/20 rounded-xl p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <h3 class="text-sm font-semibold text-slate-400 uppercase">Original draft</h3>
+          <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20">AI tells: 100/100</span>
+        </div>
+        <p id="exampleBefore" class="text-slate-300 text-sm leading-relaxed whitespace-pre-line break-words">Certainly! Here's a LinkedIn post for you:
+
+In today's fast-paced digital world, consistency is a game-changer. It's not just about posting more—it's about showing up with something useful. Let's delve into what actually works.
+
+Furthermore, the best creators leverage their own stories—not templates—to unlock real engagement.</p>
+      </div>
+      <div class="bg-cardbg border border-emerald-500/30 rounded-xl p-6 glow-effect">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <h3 class="text-sm font-semibold text-slate-400 uppercase">CleanDraft output</h3>
+          <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">AI tells: 0/100</span>
+        </div>
+        <p id="exampleAfter" class="text-slate-200 text-sm leading-relaxed whitespace-pre-line break-words">Today, consistency is a big deal. It's about showing up with something useful, not just posting more. Let's look into what actually works.
+
+Also, the best creators use their own stories, not templates, to open up real engagement.</p>
+        <ul class="mt-4 flex flex-wrap gap-2 text-xs" aria-label="Changes made in this example"><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">Robotic intro removed ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"In today's fast-paced world" opener ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"It's not just X, it's Y" structure ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"delve" replaced ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">Furthermore / Moreover / Additionally ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"game-changer" replaced ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"leverage" replaced ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"unlock" replaced ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">Em dashes replaced ×2</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" class="py-14 px-4 max-w-4xl mx-auto w-full text-center scroll-mt-20" aria-labelledby="pricing-title">
+    <div class="mb-10">
+      <h2 id="pricing-title" class="text-3xl font-bold text-white mb-3">Simple pricing</h2>
+      <p class="text-slate-400 text-sm">Start with <span data-free-total>10</span> free cleanups. Then one plan, one price.</p>
+    </div>
+    <div class="bg-cardbg border border-brandpurple/40 rounded-2xl p-6 sm:p-8 max-w-md mx-auto relative glow-effect">
+      <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-brandpurple to-brandindigo text-white text-xs font-bold uppercase tracking-wider whitespace-nowrap">CleanDraft Unlimited</div>
+      <div class="mt-4 mb-6">
+        <span class="text-5xl font-extrabold text-white">$9</span><span class="text-slate-400 text-sm"> / month</span>
+      </div>
+      <ul class="text-left space-y-4 mb-8 text-sm text-slate-300">
+        <li class="flex items-start gap-3"><i class="fa-solid fa-check text-emerald-400 mt-0.5" aria-hidden="true"></i><span>Unlimited cleanups (after your <span data-free-total>10</span> free ones)</span></li>
+        <li class="flex items-start gap-3"><i class="fa-solid fa-check text-emerald-400 mt-0.5" aria-hidden="true"></i><span>Em dash, robotic intro and AI cliché cleanup</span></li>
+        <li class="flex items-start gap-3"><i class="fa-solid fa-check text-emerald-400 mt-0.5" aria-hidden="true"></i><span>A list of what changed, every time</span></li>
+        <li class="flex items-start gap-3"><i class="fa-solid fa-check text-emerald-400 mt-0.5" aria-hidden="true"></i><span>Text processed in your browser, not sent to our servers</span></li>
+      </ul>
+      <a href="https://cleandraftai.lemonsqueezy.com/checkout/buy/bcd88493-3b8f-48da-9ab8-559c587a4cde" target="_blank" rel="noopener" class="block w-full py-3.5 px-6 rounded-xl font-semibold text-white bg-gradient-to-r from-brandpurple to-brandindigo hover:opacity-95 transition-all shadow-lg hover:shadow-purple-500/25">
+        Get CleanDraft Unlimited
+      </a>
+      <p class="text-xs text-slate-500 mt-4">Checkout by Lemon Squeezy. Cancel anytime.</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="py-14 px-4 max-w-4xl mx-auto w-full scroll-mt-20" aria-labelledby="faq-title">
+    <div class="text-center mb-10">
+      <h2 id="faq-title" class="text-3xl font-bold text-white mb-3">Frequently asked questions</h2>
+    </div>
+    <div class="space-y-3">
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5 group">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">Is my text sent anywhere?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">No. The cleanup engine is plain JavaScript that runs in your browser. Your draft is processed on your device and is not sent to or stored on a server.</p>
+      </details>
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">What exactly does it change?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">Em dashes (replaced with a comma, period or colon based on context), robotic intros and sign-offs (“Certainly!”, “Great question!”, “I hope this helps!”), stock openers like “In today's fast-paced world”, the “It's not just X, it's Y” pattern, and overused words such as delve, testament, tapestry, game-changer, leverage, unlock and landscape. After each cleanup you get a list of what changed.</p>
+      </details>
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">Will it rewrite my whole post?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">No. It makes targeted, rule-based edits and leaves the rest of your wording alone. Give the result a quick read before you post.</p>
+      </details>
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">Does it guarantee my post passes AI detectors?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">No. CleanDraft removes the most common tells that readers notice. It doesn't promise any detector score, and the “AI tells” number on this page is just a count of what the engine found.</p>
+      </details>
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">How do the free cleanups work?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">You get <span data-free-total>10</span> free cleanups, counted in this browser. After that, CleanDraft Unlimited is $9/month.</p>
+      </details>
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">Can I cancel anytime?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">Yes. Payments are handled by Lemon Squeezy, and you can cancel your subscription at any time.</p>
+      </details>
+    </div>
+  </section>
+  </main>
+
+  <footer class="border-t border-cardborder py-8 px-4 text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center">
+      <div>© 2026 CleanDraft.ai</div>
+      <div>Your text is processed in your browser.</div>
+    </div>
+  </footer>
+
+  <div id="toast" role="status" aria-live="polite" class="pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 translate-y-2 opacity-0 z-[70] px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white shadow-xl max-w-[90vw] text-center"></div>
+
+  <script>
+/* CleanDraft engine v3: self-contained, runs in the browser. */
+var CleanDraftEngine = (function () {
+  var A = "['\u2019]"; // straight or curly apostrophe
+  function keepCase(src, rep) {
+    if (!src) return rep;
+    if (src[0] === src[0].toUpperCase() && src[0] !== src[0].toLowerCase()) return rep.charAt(0).toUpperCase() + rep.slice(1);
+    return rep;
+  }
+  function R(s, f) { return new RegExp(s, f || 'gi'); }
+  // Each rule: label (shown in the changes list), re, rep (string or function)
+  var RULES = [
+    // ---- robotic intros / outros ----
+    { label: 'Robotic intro removed', re: R("^[ \\t]*(?:certainly|sure|absolutely|of course|great question|what a great question|excellent question|good question)\\s*[!.,]+[ \\t]*(?:(?:here" + A + "s|here is|here are|below is)[^\\n]*:[ \\t]*\\n*)?", 'gim'), rep: '' },
+    { label: 'Robotic intro removed', re: R("^[ \\t]*(?:here" + A + "s|here is|here are)\\s+(?:a|an|the|your)\\s+[^\\n]{0,80}?(?:post|draft|version|caption|thread|tweet|text)[^\\n]{0,40}?:[ \\t]*\\n+", 'gim'), rep: '' },
+    { label: 'Robotic intro removed', re: R("^[ \\t]*as an ai(?: language model)?,\\s*", 'gim'), rep: '' },
+    { label: 'Robotic outro removed', re: R("\\n*[ \\t]*(?:i hope this helps[!.]?|let me know if you(?:" + A + "d| would) like[^\\n]*|feel free to (?:adjust|tweak|modify)[^\\n]*)[ \\t]*$", 'gim'), rep: '' },
+    // ---- openers ----
+    { label: '"In today\'s fast-paced world" opener', re: R("\\bin today" + A + "s\\s+(?:(?:fast-paced|fast paced|ever-changing|ever-evolving|rapidly evolving|rapidly changing|hyper-connected|digital|modern|competitive|increasingly digital)[ ,]+)+(?:digital\\s+)?(?:world|landscape|ecosystem|era|age|environment|market|economy)\\b,?\\s*"), rep: function (m) { return keepCase(m, 'today, '); } },
+    { label: 'Filler phrase removed', re: R("\\b(?:it" + A + "s|it is)\\s+(?:important|worth|crucial)\\s+(?:to note|noting|to remember)\\s+that\\s+"), rep: '' },
+    { label: 'Filler phrase removed', re: R("^[ \\t]*in conclusion,\\s*", 'gim'), rep: '' },
+    // ---- "it's not just X, it's Y" ----
+    { label: '"It\'s not just X, it\'s Y" structure', re: R("\\b(it" + A + "s|it is|this is|that" + A + "s)\\s+not\\s+(?:just|only|merely|simply)\\s+(about\\s+)?([^,;\\u2014\\u2013.!?\\n]{1,80}?)\\s*(?:\\s[\\u2014\\u2013]\\s|\\u2014|--|,|;|\\.)\\s*(?:it" + A + "s|it is|this is|that" + A + "s)\\s+(about\\s+)?([^.!?\\n]{1,120})"),
+      rep: function (m, lead, ab1, x, ab2, y) { var about = ab2 || ab1 || ''; return lead + ' ' + about + y.trim() + ', not just ' + x.trim(); } },
+    // ---- delve (most specific first; never "look closer into") ----
+    { label: '"delve" replaced', re: R("\\bdelve\\s+deeper\\s+into\\b"), rep: function (m) { return keepCase(m, 'dig deeper into'); } },
+    { label: '"delve" replaced', re: R("\\bdelve\\s+deeper\\b"), rep: function (m) { return keepCase(m, 'dig deeper'); } },
+    { label: '"delve" replaced', re: R("\\bdelve\\s+into\\b"), rep: function (m) { return keepCase(m, 'look into'); } },
+    { label: '"delve" replaced', re: R("\\bdelves\\s+into\\b"), rep: function (m) { return keepCase(m, 'looks into'); } },
+    { label: '"delve" replaced', re: R("\\bdelved\\s+into\\b"), rep: function (m) { return keepCase(m, 'looked into'); } },
+    { label: '"delve" replaced', re: R("\\bdelving\\s+into\\b"), rep: function (m) { return keepCase(m, 'looking into'); } },
+    { label: '"delve" replaced', re: R("\\bdelv(e|es|ed|ing)\\b"), rep: function (m, s) { return keepCase(m, { e: 'dig in', es: 'digs in', ed: 'dug in', ing: 'digging in' }[s.toLowerCase()]); } },
+    // ---- vocabulary ----
+    { label: '"testament to" replaced', re: R("\\b(?:a|the)\\s+(?:true\\s+|real\\s+)?testament\\s+to\\b"), rep: function (m) { return keepCase(m, 'proof of'); } },
+    { label: '"testament to" replaced', re: R("\\btestament\\s+to\\b"), rep: function (m) { return keepCase(m, 'proof of'); } },
+    { label: '"tapestry" replaced', re: R("\\b(?:a|the)\\s+(?:rich|vibrant|intricate|complex)\\s+tapestry\\s+of\\b"), rep: function (m) { return keepCase(m, 'a mix of'); } },
+    { label: '"tapestry" replaced', re: R("\\btapestry\\s+of\\b"), rep: function (m) { return keepCase(m, 'mix of'); } },
+    { label: '"tapestry" replaced', re: R("\\btapestr(y|ies)\\b"), rep: function (m, s) { return keepCase(m, s.toLowerCase() === 'y' ? 'mix' : 'mixes'); } },
+    { label: 'Furthermore / Moreover / Additionally', re: R("\\b(?:furthermore|moreover|additionally|in addition)\\s*,\\s*"), rep: function (m) { return keepCase(m, 'also, '); } },
+    { label: 'Furthermore / Moreover / Additionally', re: R("\\b(?:furthermore|moreover|additionally)\\b"), rep: function (m) { return keepCase(m, 'also'); } },
+    { label: '"game-changer" replaced', re: R("\\b(?:a|an)\\s+(?:absolute\\s+|total\\s+|real\\s+)?game[- ]changer\\b"), rep: function (m) { return keepCase(m, 'a big deal'); } },
+    { label: '"game-changer" replaced', re: R("\\bgame[- ]changers?\\b"), rep: function (m) { return keepCase(m, /s$/i.test(m) ? 'big deals' : 'big deal'); } },
+    { label: '"game-changer" replaced', re: R("\\bgame[- ]changing\\b"), rep: function (m) { return keepCase(m, 'powerful'); } },
+    { label: '"leverage" replaced', re: R("\\bleverag(ing|ed|es)\\b"), rep: function (m, s) { return keepCase(m, { ing: 'using', ed: 'used', es: 'uses' }[s.toLowerCase()]); } },
+    { label: '"leverage" replaced', re: R("\\b(to|can|could|we|you|they|i|and|or|that|who|which|will|would|should|must|also|now|just|simply|let" + A + "s|help you|helps you)\\s+leverage\\b"), rep: function (m, w) { return w + ' use'; } },
+    { label: '"leverage" replaced', re: R("\\bleverage\\s+(?=(?:their|your|our|my|the|this|these|those|its|his|her|ai|data|technology|tools?)\\b)"), rep: function (m) { return keepCase(m, 'use '); } },
+    { label: '"leverage" replaced', re: R("^([ \\t]*)leverage\\b", 'gim'), rep: function (m, sp) { return sp + 'Use'; } },
+    { label: '"unlock" replaced', re: R("\\bunlock(s|ed|ing)?\\s+(your|their|our|its|the)\\s+(full\\s+|true\\s+)?potential\\b"), rep: function (m, s, who, full) { var v = { '': 'reach', s: 'reaches', ed: 'reached', ing: 'reaching' }[(s || '').toLowerCase()]; return keepCase(m, v + ' ' + who + ' ' + (full || '') + 'potential'); } },
+    { label: '"unlock" replaced', re: R("\\bunlock(s|ed|ing)?\\b"), rep: function (m, s) { return keepCase(m, { '': 'open up', s: 'opens up', ed: 'opened up', ing: 'opening up' }[(s || '').toLowerCase()]); } },
+    { label: '"landscape" replaced', re: R("\\bthe\\s+(?:(?:ever-evolving|ever-changing|rapidly evolving|rapidly changing|evolving|dynamic|complex|current|modern|digital)\\s+)?landscape\\s+of\\s+"), rep: '' },
+    { label: '"landscape" replaced', re: R("\\b(?:ever-evolving|ever-changing|rapidly evolving|rapidly changing|evolving|dynamic|complex)\\s+landscape\\b"), rep: function (m) { return keepCase(m, 'space'); } },
+    { label: '"landscape" replaced', re: R("\\blandscape(s)?\\b"), rep: function (m, s) { return keepCase(m, s ? 'spaces' : 'space'); } },
+    { label: 'Other AI buzzwords', re: R("\\bnavigat(e|es|ing)\\s+the\\s+complexities\\s+of\\b"), rep: function (m, s) { return keepCase(m, { e: 'handle', es: 'handles', ing: 'handling' }[s.toLowerCase()]); } },
+    { label: 'Other AI buzzwords', re: R("\\bin\\s+the\\s+realm\\s+of\\b"), rep: function (m) { return keepCase(m, 'in'); } },
+    { label: 'Other AI buzzwords', re: R("\\bseamless(ly)?\\b"), rep: function (m, s) { return keepCase(m, s ? 'smoothly' : 'smooth'); } },
+    { label: 'Other AI buzzwords', re: R("\\bembark(s|ed|ing)?\\s+on\\b"), rep: function (m, s) { return keepCase(m, { '': 'start', s: 'starts', ed: 'started', ing: 'starting' }[(s || '').toLowerCase()]); } },
+    { label: 'Other AI buzzwords', re: R("\\bpivotal\\b"), rep: function (m) { return keepCase(m, 'key'); } }
   ];
 
-  function dashRule(text, keepDashes) {
-    var out = [];
-    if (keepDashes) return out;
-    var paired = /[ \t]*\u2014[ \t]*([^\u2014\u2013.!?\n]{1,80}?)[ \t]*\u2014[ \t]*(?=[a-z])/g, m;
-    while ((m = paired.exec(text))) out.push({ start: m.index, end: m.index + m[0].length, rule: 'dash-pair', cat: 'dashes', repl: ', ' + m[1] + ', ', why: 'Paired em-dashes around an aside. Commas read more naturally.' });
-    var single = /[ \t]*[\u2014\u2013][ \t]*/g;
-    while ((m = single.exec(text))) {
-      var s = m.index, e = s + m[0].length, prev = text.slice(0, s), next = text.slice(e), r;
-      if (/\d$/.test(prev) && /^\d/.test(next)) r = '-';
-      else if (s === 0 || /\n$/.test(prev)) r = '- ';
-      else if (next === '' || /^\n/.test(next)) r = '.';
-      else if (/^[A-Z][a-z]/.test(next) && !/^I['\u2019]/.test(next)) r = '. ';
-      else r = ', ';
-      var en = m[0].indexOf('\u2013') !== -1;
-      out.push({ start: s, end: e, rule: en ? 'en-dash' : 'em-dash', cat: 'dashes', repl: r, why: en ? 'En dash used as punctuation.' : 'The em-dash is the most-cited ChatGPT tell.' });
-    }
-    return out;
-  }
+  var WORDS_AFTER_COMMA = /^(?:and|but|so|or|yet|which|who|because|while|not|especially|including|like|from|even|just|all)\b/i;
+  var CLAUSE_START = /^(?:it|it's|it’s|this|that's|that’s|they|they're|they’re|we|we're|we’re|you|you're|you’re|i|i'm|i’m|he|she|there's|there’s|there is)\s+\S+\s+\S+/i;
 
-  var EMOJI = /(?:\p{Extended_Pictographic}|[\u2705\u2714\u274C\u27A1])(?:\uFE0F|\u200D\p{Extended_Pictographic})*/gu;
-  function presetRules(text, preset) {
-    var out = [], m, i = 0;
-    var emojis = [];
-    EMOJI.lastIndex = 0;
-    while ((m = EMOJI.exec(text))) emojis.push(m);
-    var kept = 0;
-    emojis.forEach(function (em) {
-      var end = em.index + em[0].length; if (text[end] === ' ') end++;
-      var bullet = em.index === 0 || text[em.index - 1] === '\n';
-      if (bullet) { out.push({ start: em.index, end: end, rule: 'emoji-bullet', cat: 'formatting', repl: '- ', why: 'Emoji bullets (✅ 🚀 👉) are a ChatGPT template tell. Plain dashes read as human.' }); return; }
-      if (kept < preset.maxEmoji) { kept++; return; }
-      out.push({ start: em.index, end: end, rule: 'emoji', cat: 'formatting', repl: '', why: 'Emoji spam (more than ' + preset.maxEmoji + ' for ' + preset.name + ').' });
+  function fixEmDashes(text, bump) {
+    // normalise: spaced en dashes and double hyphens used as em dashes
+    text = text.replace(/(\S)\s+(?:\u2013|--)\s+(?=\S)/g, function (m, a) { return a + ' \u2014 '; });
+    // bullets that start with a dash
+    text = text.replace(/^([ \t]*)[\u2014\u2013][ \t]*/gm, function (m, sp) { bump('Em dashes replaced'); return sp + '- '; });
+    // paired dashes around a short aside: "X—aside—Y" -> "X, aside, Y"
+    text = text.replace(/\s*\u2014\s*([^\u2014.!?:\n]{1,60}?)\s*\u2014\s*/g, function (m, aside) { bump('Em dashes replaced', 2); return ', ' + aside.trim() + ', '; });
+    // single dashes, decided by context
+    text = text.replace(/([^\n])\s*\u2014\s*([^\n]*)/g, function (m, before, after) {
+      bump('Em dashes replaced');
+      if (!after) return before + '.';
+      var tail = after.split(/[.!?\n]/)[0].trim();
+      var words = tail ? tail.split(/\s+/).length : 0;
+      if (/[,;:]/.test(before)) return before + ' ' + after;
+      if (WORDS_AFTER_COMMA.test(after)) return before + ', ' + after;
+      if (CLAUSE_START.test(after)) return before + '. ' + after.charAt(0).toUpperCase() + after.slice(1);
+      if (/^[A-Z]/.test(after) && !/^I\b/.test(after) && words > 3) return before + '. ' + after;
+      if (words === 1 && /ly$/i.test(tail)) return before + ', ' + after;
+      if (words > 0 && words <= 4) return before + ': ' + after;
+      return before + ', ' + after;
     });
-    var tags = []; var tagRe = /(^|[ \t])(#[A-Za-z][\w]*)/gm;
-    while ((m = tagRe.exec(text))) tags.push({ index: m.index + m[1].length, len: m[2].length });
-    if (tags.length > preset.maxHashtags) {
-      tags.slice(preset.maxHashtags).forEach(function (t) {
-        var s = t.index; if (s > 0 && text[s - 1] === ' ') s--;
-        out.push({ start: s, end: t.index + t.len, rule: 'hashtags', cat: 'formatting', repl: '', why: 'Hashtag spam (> ' + preset.maxHashtags + ' for ' + preset.name + ').' });
-      });
-    }
-    return out;
-  }
-
-  function sentences(text) {
-    return text.split(/(?<=[.!?])\s+|\n+/).map(function (s) { return s.trim(); }).filter(function (s) { return s.split(/\s+/).length >= 3; });
-  }
-  function rhythmFlag(text) {
-    var ss = sentences(text);
-    if (ss.length < 5) return null;
-    var lens = ss.map(function (s) { return s.split(/\s+/).length; });
-    var mean = lens.reduce(function (a, b) { return a + b; }, 0) / lens.length;
-    var sd = Math.sqrt(lens.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / lens.length);
-    var cv = sd / mean;
-    if (cv < 0.3) return { start: 0, end: 0, rule: 'uniform-length', cat: 'structure', repl: null, whole: true, excerpt: ss.length + ' sentences, avg ' + mean.toFixed(0) + ' words, variation ' + (cv * 100).toFixed(0) + '%', why: 'Sentences are all about the same length. Human writing mixes short punches with longer lines.' };
-    return null;
-  }
-
-  function overlaps(a, list) {
-    for (var i = 0; i < list.length; i++) { var b = list[i]; if (a.start < b.end && b.start < a.end) return true; }
-    return false;
-  }
-
-  function analyze(text, opts) {
-    opts = opts || {};
-    var preset = PRESETS[opts.preset] || PRESETS.linkedin;
-    text = String(text || '').replace(/\r\n?/g, '\n');
-    var fixes = [], flags = [];
-    var cand = dashRule(text, opts.keepDashes).concat(presetRules(text, preset));
-    R.forEach(function (r) {
-      var re = new RegExp(r[2].source, r[2].flags), m;
-      while ((m = re.exec(text))) {
-        if (m[0].length === 0) { re.lastIndex++; continue; }
-        var c = { start: m.index, end: m.index + m[0].length, rule: r[0], cat: r[1], why: r[4] };
-        if (r[3] === null) { c.repl = null; if (!overlaps(c, flags)) flags.push(c); continue; }
-        c.repl = typeof r[3] === 'function' ? r[3](m, { text: text }) : r[3];
-        cand.push(c);
-      }
-    });
-    // Resolve overlaps: whole-phrase removals (longest first) win, then the rest in priority order.
-    cand.filter(function (c) { return c.repl === '' && c.end - c.start > 3; })
-      .sort(function (a, b) { return (b.end - b.start) - (a.end - a.start); })
-      .forEach(function (c) { if (!overlaps(c, fixes)) fixes.push(c); });
-    cand.forEach(function (c) { if (fixes.indexOf(c) === -1 && !overlaps(c, fixes)) fixes.push(c); });
-    var rh = rhythmFlag(text); if (rh) flags.push(rh);
-    fixes.sort(function (a, b) { return a.start - b.start; });
-    flags.sort(function (a, b) { return a.start - b.start; });
-    fixes.forEach(function (c, i) { c.id = i; c.original = text.slice(c.start, c.end); c.accepted = true; });
-    flags.forEach(function (c) { if (!c.whole) c.original = text.slice(c.start, c.end); });
-    return { text: text, fixes: fixes, flags: flags, preset: preset, score: score(text, fixes, flags) };
-  }
-
-  function score(text, fixes, flags) {
-    var words = (text.match(/\S+/g) || []).length;
-    if (!words) return 0;
-    var raw = 0;
-    fixes.concat(flags).forEach(function (c) {
-      if (c.rule === 'hidden') { raw += 0.5; return; }
-      raw += WEIGHT[c.cat] || 2;
-    });
-    var density = raw * 100 / Math.max(words, 40);
-    return Math.min(100, Math.round(100 * (1 - Math.exp(-density / 25))));
+    return text;
   }
 
   function tidy(text) {
-    text = text.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/\u2026/g, '...');
-    text = text.replace(/[ \t]+/g, ' ');
-    text = text.replace(/ +\n/g, '\n').replace(/\n +/g, '\n');
-    text = text.replace(/ +([,.;:!?])/g, '$1');
-    text = text.replace(/,\s*,+/g, ',');
-    text = text.replace(/,\s*([.!?;:])/g, '$1');
-    text = text.replace(/([.!?])\s*,/g, '$1');
-    text = text.replace(/:\s*,\s*/g, ': ');
-    text = text.replace(/([^.])\.{2}(?!\.)/g, '$1.');
-    text = text.replace(/^[,;:.]\s*/gm, '');
-    text = text.replace(/([,;:])(?=[A-Za-z])/g, '$1 ');
-    text = text.replace(/\b([Aa]) (?=[aeiou]\w)/g, '$1n ');
-    text = text.replace(/\b([Aa])n (?=(?:big|smooth|solid|new|modern|major|key|close)\b)/g, '$1 ');
-    text = text.replace(/^([\s\-*•>"'(]*)([a-z])/gm, function (_, pre, c) { return pre + c.toUpperCase(); });
-    text = text.replace(/([.!?]["')\]]?\s+)([a-z])/g, function (m, p, c, off, str) {
-      var before = str.slice(Math.max(0, off - 8), off + 1);
-      if (/(?:\be\.g|\bi\.e|\betc|\bvs|\bapprox|\.\.)\.$/i.test(before)) return m;
-      return p + c.toUpperCase();
+    return text
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/[ \t]+([,.;:!?])/g, '$1')
+      .replace(/,\s*,/g, ',')
+      .replace(/,\s*([.!?:;])/g, '$1')
+      .replace(/:\s*,/g, ':')
+      .replace(/([.!?])\s*,\s*/g, '$1 ')
+      .replace(/^[ \t]*,\s*/gm, '')
+      .replace(/^[ \t]+|[ \t]+$/gm, '')
+      .replace(/(^|[.!?]\s+|\n\s*(?:[-•*]\s+)?)([a-z])/g, function (m, p, c) { return p + c.toUpperCase(); })
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  function clean(input) {
+    var counts = {}, order = [];
+    function bump(label, n) { if (!(label in counts)) { counts[label] = 0; order.push(label); } counts[label] += (n || 1); }
+    var text = String(input || '').replace(/\r\n?/g, '\n');
+    RULES.forEach(function (rule) {
+      text = text.replace(rule.re, function () {
+        bump(rule.label);
+        return typeof rule.rep === 'function' ? rule.rep.apply(null, arguments) : rule.rep;
+      });
     });
-    text = text.replace(/^[ \t]*[.,;:!?]+[ \t]*$/gm, '');
-    text = text.replace(/\n{3,}/g, '\n\n');
-    return text.trim();
+    text = fixEmDashes(text, bump);
+    text = tidy(text);
+    // don't force a capital if the user's text started lowercase (e.g. a fragment)
+    var firstIn = (String(input || '').match(/[A-Za-z]/) || [''])[0];
+    if (firstIn && firstIn === firstIn.toLowerCase() && text) text = text.charAt(0).toLowerCase() + text.slice(1);
+    var changes = order.map(function (l) { return { label: l, count: counts[l] }; });
+    var total = changes.reduce(function (s, c) { return s + c.count; }, 0);
+    return { text: text, changes: changes, total: total };
   }
 
-  function apply(result, acceptedIds) {
-    var text = result.text, out = '', pos = 0;
-    result.fixes.forEach(function (c) {
-      var ok = acceptedIds ? acceptedIds.indexOf(c.id) !== -1 : c.accepted;
-      if (!ok) return;
-      out += text.slice(pos, c.start) + c.repl; pos = c.end;
-    });
-    return tidy(out + text.slice(pos));
+  function score(input) {
+    var t = String(input || '');
+    if (!t.trim()) return 0;
+    var hits = clean(t).total;
+    var words = t.trim().split(/\s+/).length;
+    // density-based 0-100: hits per 100 words, scaled
+    return Math.min(100, Math.round(hits * 12 + (hits / Math.max(words, 1)) * 400));
   }
-
-  function clean(text, opts) {
-    var a = analyze(text, opts);
-    var cleaned = apply(a);
-    var after = analyze(cleaned, opts);
-    return { before: a.score, after: after.score, cleaned: cleaned, analysis: a, afterAnalysis: after };
-  }
-
-  var api = { analyze: analyze, apply: apply, clean: clean, tidy: tidy, CATS: CATS, PRESETS: PRESETS };
-  if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  root.CDEngine = api;
-})(typeof window !== 'undefined' ? window : globalThis);
-// ENGINE-END
-</script>
-
-<script>
-(function () {
-  var E = window.CDEngine, $ = function (id) { return document.getElementById(id); };
-  var state = { preset: 'linkedin', analysis: null };
-  var SAMPLE = "In today's fast-paced world, personal branding is a game-changer for founders. Let's dive in.\n\nIt's important to note that consistency matters more than perfection — and most people quit too early. It's not about going viral. It's about showing up.\n\n✅ Post daily\n✅ Tell stories\n✅ Engage with comments\n\nFurthermore, you need to unlock the power of storytelling to truly stand out. In conclusion, start small, stay consistent, and delve into what your audience actually wants.\n\nI hope this helps! What are your thoughts? 👇\n\n#PersonalBranding #Founders #Growth #LinkedIn #Startups";
-  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-  function scoreColor(el, v) { el.textContent = v; el.className = 'font-bold text-lg ' + (v >= 60 ? 'text-red-600' : v >= 30 ? 'text-amber-600' : 'text-emerald-600'); }
-
-  function render() {
-    var text = $('input').value;
-    var a = state.analysis = E.analyze(text, { preset: state.preset, keepDashes: $('keepDashes').checked });
-    scoreColor($('scoreBefore'), a.score);
-    // highlighted original (fixes + non-overlapping flags)
-    var spans = a.fixes.slice();
-    a.flags.forEach(function (f) { if (!f.whole && !spans.some(function (s) { return f.start < s.end && s.start < f.end; })) spans.push(f); });
-    spans.sort(function (x, y) { return x.start - y.start; });
-    var h = '', pos = 0;
-    spans.forEach(function (s) { h += esc(a.text.slice(pos, s.start)) + '<span class="hl cat-' + s.cat + '" title="' + esc(E.CATS[s.cat] + ': ' + s.why) + '">' + esc(a.text.slice(s.start, s.end)) + '</span>'; pos = s.end; });
-    $('highlighted').innerHTML = h + esc(a.text.slice(pos));
-    // groups
-    var groups = {};
-    a.fixes.concat(a.flags).forEach(function (c) { (groups[c.cat] = groups[c.cat] || []).push(c); });
-    var g = Object.keys(E.CATS).filter(function (k) { return groups[k]; }).map(function (k) {
-      var items = groups[k].map(function (c) {
-        var ex = c.whole ? c.excerpt : '"' + c.original.trim().slice(0, 70) + (c.original.length > 70 ? '…' : '') + '"';
-        var fix = c.repl === null || c.repl === undefined ? '<span class="text-xs bg-slate-200 px-1 rounded">flag only</span>' : (c.repl.trim() ? '→ <b>' + esc(c.repl.trim()) + '</b>' : '→ <i>remove</i>');
-        return '<li class="py-0.5"><span class="font-mono text-xs">' + esc(ex) + '</span> ' + fix + '<div class="text-xs text-slate-500">' + esc(c.why) + '</div></li>';
-      }).join('');
-      return '<details open class="border rounded p-2"><summary class="cursor-pointer"><span class="hl cat-' + k + '">' + E.CATS[k] + '</span> <span class="text-slate-500">(' + groups[k].length + ')</span></summary><ul class="mt-1">' + items + '</ul></details>';
-    }).join('');
-    $('groups').innerHTML = g || '<p class="text-slate-400">' + (text.trim() ? 'No AI fingerprints found. 🎉' : 'Paste text to see what gives it away.') + '</p>';
-    renderDiff(); renderOutput();
-  }
-
-  function renderDiff() {
-    var a = state.analysis, h = '', pos = 0;
-    a.fixes.forEach(function (c) {
-      h += esc(a.text.slice(pos, c.start)) + '<span class="chgwrap ' + (c.accepted ? '' : 'rejected') + '" data-id="' + c.id + '" title="' + esc(c.why) + ' (click to ' + (c.accepted ? 'reject' : 'accept') + ')"><del class="chg">' + esc(c.original) + '</del>' + (c.repl ? '<ins class="chg">' + esc(c.repl) + '</ins>' : '') + '</span>';
-      pos = c.end;
-    });
-    $('diff').innerHTML = (h + esc(a.text.slice(pos))) || '<span class="text-slate-400">Changes appear here.</span>';
-  }
-
-  function renderOutput() {
-    var a = state.analysis, out = E.apply(a);
-    $('output').textContent = out;
-    scoreColor($('scoreAfter'), E.analyze(out, { preset: state.preset, keepDashes: $('keepDashes').checked }).score);
-    var lim = a.preset.limit, n = Array.from(out).length;
-    $('counter').innerHTML = '<span class="' + (n > lim ? 'text-red-600 font-semibold' : 'text-slate-500') + '">' + n + ' / ' + lim + ' characters (' + a.preset.name + ')' + (n > lim ? ', over the limit: trim before posting' : '') + '</span>';
-  }
-
-  $('diff').addEventListener('click', function (e) {
-    var w = e.target.closest('.chgwrap'); if (!w) return;
-    var c = state.analysis.fixes[+w.dataset.id]; c.accepted = !c.accepted; renderDiff(); renderOutput();
-  });
-  $('acceptAll').onclick = function () { state.analysis.fixes.forEach(function (c) { c.accepted = true; }); renderDiff(); renderOutput(); };
-  $('rejectAll').onclick = function () { state.analysis.fixes.forEach(function (c) { c.accepted = false; }); renderDiff(); renderOutput(); };
-  $('cleanBtn').onclick = render;
-  $('input').addEventListener('input', render);
-  $('keepDashes').addEventListener('change', render);
-  $('sample').onclick = function () { $('input').value = SAMPLE; render(); };
-  document.querySelectorAll('.preset').forEach(function (b) {
-    b.onclick = function () { state.preset = b.dataset.preset; paintPresets(); render(); };
-  });
-  function paintPresets() { document.querySelectorAll('.preset').forEach(function (b) { b.className = 'preset px-3 py-1 rounded border ' + (b.dataset.preset === state.preset ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white'); }); }
-  $('copyBtn').onclick = function () {
-    var t = $('output').textContent;
-    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { $('copied').textContent = 'Copied!'; }, function () {
-      var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); $('copied').textContent = 'Copied!';
-    });
-    setTimeout(function () { $('copied').textContent = ''; }, 1500);
-  };
-  if (location.hash === '#sample') $('input').value = SAMPLE;
-  paintPresets(); render();
+  return { clean: clean, score: score };
 })();
-</script>
+
+
+  </script>
+  <script>
+  (function () {
+    var FREE_TOTAL = 10;
+    var STORAGE_KEY = 'cleandraft_free_cleanups_left';
+    var SAMPLE = "In today's fast-paced digital world, building a startup—especially in AI—is a testament to hard work. Let's delve deeper into this tapestry of innovation. Furthermore, it's not just about efficiency—it's about leverage.";
+    var $ = function (id) { return document.getElementById(id); };
+    var input = $('inputText'), output = $('outputText'), copyBtn = $('copyBtn'), cleanBtn = $('cleanBtn');
+    var lastOutput = '';
+
+    function readLeft() {
+      var v;
+      try { v = parseInt(localStorage.getItem(STORAGE_KEY), 10); } catch (e) { v = NaN; }
+      if (isNaN(v) || v < 0 || v > FREE_TOTAL) v = FREE_TOTAL;
+      return v;
+    }
+    function writeLeft(v) { try { localStorage.setItem(STORAGE_KEY, String(v)); } catch (e) {} }
+    var left = readLeft();
+
+    function renderCounter() {
+      $('cleanupCounter').textContent = left;
+      $('limitBox').classList.toggle('hidden', left > 0);
+    }
+    document.querySelectorAll('[data-free-total]').forEach(function (el) { el.textContent = FREE_TOTAL; });
+
+    var toastTimer;
+    function toast(msg) {
+      var t = $('toast'); t.textContent = msg;
+      t.classList.remove('opacity-0', 'translate-y-2');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { t.classList.add('opacity-0', 'translate-y-2'); }, 2200);
+    }
+
+    function badge(el, score) {
+      el.textContent = score + '/100';
+      var cls = score > 50 ? 'bg-red-500/10 text-red-400 border-red-500/20'
+              : score > 20 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      el.className = 'font-bold px-2 py-0.5 rounded border ' + cls;
+    }
+    function onInput() {
+      var v = input.value;
+      $('wordCount').textContent = v.trim() ? v.trim().split(/\s+/).length : 0;
+      badge($('scoreBefore'), CleanDraftEngine.score(v));
+    }
+
+    function renderChanges(changes) {
+      var list = $('changesList'); list.innerHTML = '';
+      if (!changes.length) {
+        var li = document.createElement('li');
+        li.className = 'px-2 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700';
+        li.textContent = 'No AI tells found. Your draft looks clean.';
+        list.appendChild(li);
+      }
+      changes.forEach(function (c) {
+        var li = document.createElement('li');
+        li.className = 'px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20';
+        li.textContent = c.label + ' ×' + c.count;
+        list.appendChild(li);
+      });
+      $('changesBox').classList.remove('hidden');
+    }
+
+    function clean() {
+      var text = input.value;
+      if (!text.trim()) { toast('Paste a draft first.'); input.focus(); return; }
+      if (left <= 0) {
+        renderCounter();
+        toast('Free cleanups used up. See CleanDraft Unlimited below.');
+        $('limitBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      var r = CleanDraftEngine.clean(text);
+      lastOutput = r.text;
+      output.textContent = r.text;
+      copyBtn.disabled = !r.text;
+      badge($('scoreAfter'), CleanDraftEngine.score(r.text));
+      renderChanges(r.changes);
+      left -= 1; writeLeft(left); renderCounter();
+      $('statsBanner').textContent = r.total
+        ? 'Done. ' + r.total + ' change' + (r.total === 1 ? '' : 's') + ' made. ' + left + ' free cleanup' + (left === 1 ? '' : 's') + ' left.'
+        : 'Done. Nothing to fix. ' + left + ' free cleanup' + (left === 1 ? '' : 's') + ' left.';
+    }
+
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed'; ta.style.top = '-1000px'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+      var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    }
+    function copy() {
+      if (!lastOutput) return;
+      var done = function () { toast('Copied to clipboard'); };
+      var fail = function () { if (fallbackCopy(lastOutput)) done(); else toast('Copy failed. Select the text and copy it manually.'); };
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(lastOutput).then(done, fail);
+      else fail();
+    }
+
+    input.addEventListener('input', onInput);
+    input.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); clean(); } });
+    cleanBtn.addEventListener('click', clean);
+    copyBtn.addEventListener('click', copy);
+    $('loadSampleBtn').addEventListener('click', function () { input.value = SAMPLE; onInput(); input.focus(); });
+    $('clearBtn').addEventListener('click', function () {
+      input.value = ''; lastOutput = ''; copyBtn.disabled = true; onInput();
+      output.innerHTML = '<span class="text-slate-500 italic">Your cleaned draft will appear here.</span>';
+      $('scoreAfter').textContent = '–'; $('changesBox').classList.add('hidden');
+      $('statsBanner').textContent = 'Ready to clean your text.';
+    });
+    renderCounter(); onInput();
+  })();
+  </script>
 </body>
 </html>
