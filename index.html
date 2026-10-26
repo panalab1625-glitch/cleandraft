@@ -37,6 +37,7 @@
     #toast { transition: opacity .2s ease, transform .2s ease; }
     :focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
   </style>
+  <script data-goatcounter="https://cleandraft.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-purple-500 selection:text-white">
   <a href="#editor" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] bg-brandpurple text-white px-3 py-2 rounded-lg">Skip to the tool</a>
@@ -443,6 +444,12 @@ var CleanDraftEngine = (function () {
       toastTimer = setTimeout(function () { t.classList.add('opacity-0', 'translate-y-2'); }, 2200);
     }
 
+    function trackEvent(name, title) {
+      if (window.goatcounter && window.goatcounter.count) {
+        window.goatcounter.count({ path: name, title: title, event: true });
+      }
+    }
+
     function badge(el, score) {
       el.textContent = score + '/100';
       var cls = score > 50 ? 'bg-red-500/10 text-red-400 border-red-500/20'
@@ -492,6 +499,7 @@ var CleanDraftEngine = (function () {
       $('statsBanner').textContent = r.total
         ? 'Done. ' + r.total + ' change' + (r.total === 1 ? '' : 's') + ' made. ' + left + ' free cleanup' + (left === 1 ? '' : 's') + ' left.'
         : 'Done. Nothing to fix. ' + left + ' free cleanup' + (left === 1 ? '' : 's') + ' left.';
+      trackEvent('cleanup-run', 'Cleanup run');
     }
 
     function fallbackCopy(text) {
@@ -514,6 +522,9 @@ var CleanDraftEngine = (function () {
     input.addEventListener('input', onInput);
     input.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); clean(); } });
     cleanBtn.addEventListener('click', clean);
+    document.querySelectorAll('a[href^="https://cleandraftai.lemonsqueezy.com/"]').forEach(function (link) {
+      link.addEventListener('click', function () { trackEvent('checkout-click', 'Checkout click'); });
+    });
     copyBtn.addEventListener('click', copy);
     $('loadSampleBtn').addEventListener('click', function () { input.value = SAMPLE; onInput(); input.focus(); });
     $('clearBtn').addEventListener('click', function () {
