@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https://dfatmtoefofrsozawyjw.supabase.co wss://dfatmtoefofrsozawyjw.supabase.co; img-src 'self' data: https:; form-action 'self'; base-uri 'self'; object-src 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CleanDraft.ai: Remove Em Dashes &amp; AI Clichés From Your Drafts</title>
@@ -11,11 +13,11 @@
   <meta property="og:description" content="Strip em dashes, robotic intros and AI clichés in one click. Text is processed in your browser.">
   <meta property="og:type" content="website">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js" integrity="sha384-rwykjmWNwVxboyFmvK9OXN0wj9hnMHA2aAHtits54DuACyCq0M2PrSNxhRb+hvXT" crossorigin="anonymous"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous">
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -150,7 +152,7 @@
       <div id="limitBox" class="hidden mt-6 p-4 rounded-xl border border-brandpurple/40 bg-purple-500/10 text-sm text-slate-200" role="alert">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div><strong class="text-white">Your free cleanups are used up.</strong><p class="mt-1 text-slate-300">Upgrade for unlimited CleanDraft cleanups.</p></div>
-          <a href="https://cleandraftai.lemonsqueezy.com/checkout/buy/bcd88493-3b8f-48da-9ab8-559c587a4cde" target="_blank" rel="noopener" class="shrink-0 text-center px-4 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-brandpurple to-brandindigo">Upgrade · $9/month</a>
+          <a href="https://cleandraftai.lemonsqueezy.com/checkout/buy/bcd88493-3b8f-48da-9ab8-559c587a4cde" target="_blank" rel="noopener noreferrer" class="shrink-0 text-center px-4 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-brandpurple to-brandindigo">Upgrade · $9/month</a>
         </div>
       </div>
 
@@ -238,7 +240,7 @@ Also, the best creators use their own stories, not templates, to open up real en
         <li class="flex items-start gap-3"><i class="fa-solid fa-check text-emerald-400 mt-0.5" aria-hidden="true"></i><span>A list of what changed, every time</span></li>
         <li class="flex items-start gap-3"><i class="fa-solid fa-check text-emerald-400 mt-0.5" aria-hidden="true"></i><span>Text processed in your browser, not sent to our servers</span></li>
       </ul>
-      <a href="https://cleandraftai.lemonsqueezy.com/checkout/buy/bcd88493-3b8f-48da-9ab8-559c587a4cde" target="_blank" rel="noopener" class="block w-full py-3.5 px-6 rounded-xl font-semibold text-white bg-gradient-to-r from-brandpurple to-brandindigo hover:opacity-95 transition-all shadow-lg hover:shadow-purple-500/25">
+      <a href="https://cleandraftai.lemonsqueezy.com/checkout/buy/bcd88493-3b8f-48da-9ab8-559c587a4cde" target="_blank" rel="noopener noreferrer" class="block w-full py-3.5 px-6 rounded-xl font-semibold text-white bg-gradient-to-r from-brandpurple to-brandindigo hover:opacity-95 transition-all shadow-lg hover:shadow-purple-500/25">
         Get CleanDraft Unlimited
       </a>
       <p class="text-xs text-slate-500 mt-4">Checkout by Lemon Squeezy. Cancel anytime.</p>
@@ -324,7 +326,13 @@ var CleanDraftEngine = (function () {
     { label: 'Robotic intro removed', re: R("^[ \\t]*(?:certainly|sure|absolutely|of course|great question|what a great question|excellent question|good question)\\s*[!.,]+[ \\t]*(?:(?:here" + A + "s|here is|here are|below is)[^\\n]*:[ \\t]*\\n*)?", 'gim'), rep: '' },
     { label: 'Robotic intro removed', re: R("^[ \\t]*(?:here" + A + "s|here is|here are)\\s+(?:a|an|the|your)\\s+[^\\n]{0,80}?(?:post|draft|version|caption|thread|tweet|text)[^\\n]{0,40}?:[ \\t]*\\n+", 'gim'), rep: '' },
     { label: 'Robotic intro removed', re: R("^[ \\t]*as an ai(?: language model)?,\\s*", 'gim'), rep: '' },
+    { label: 'Robotic intro removed', re: R("(^|[.!?]\\s+)(?:so,\\s*)?let's (?:dive in|jump right in|dive into the details|dig in)[!.?]+(?=\\s|$)", 'gi'), rep: function (m, p) { return p ? p.charAt(0) + ' ' : ''; } },
+    { label: 'Robotic outro removed', re: R("(^|[.!?]\\s+)(?:i hope this helps(?: you)?|hope this helps)[!.?]+[ \t]*$", 'gi'), rep: function (m, p) { return p ? p.charAt(0) + (p.length > 1 ? ' ' : '') : ''; } },
     { label: 'Robotic outro removed', re: R("\\n*[ \\t]*(?:i hope this helps[!.]?|let me know if you(?:" + A + "d| would) like[^\\n]*|feel free to (?:adjust|tweak|modify)[^\\n]*)[ \\t]*$", 'gim'), rep: '' },
+    { label: 'Robotic outro removed', re: R("\\n*[ \t]*(?:i hope this helps(?: you)?|hope this helps)[!.?]*[ \t]*$", 'gim'), rep: '' },
+    { label: 'Robotic outro removed', re: R("(^|[.!?]\\s+)feel free to reach out[!.?]*[ \t]*$", 'gi'), rep: function (m, p) { return p; } },
+    { label: 'Email boilerplate removed', re: R("(^|[.!?]\\s+|\\n+)i hope this email finds you well[.!?]+", 'gi'), rep: function (m, p) { return p; } },
+    { label: 'Business filler removed', re: R("\\b(?:moving forward|at the end of the day),\\s*"), rep: '' },
     // ---- openers ----
     { label: '"In today\'s fast-paced world" opener', re: R("\\bin today" + A + "s\\s+(?:(?:fast-paced|fast paced|ever-changing|ever-evolving|rapidly evolving|rapidly changing|hyper-connected|digital|modern|competitive|increasingly digital)[ ,]+)+(?:digital\\s+)?(?:world|landscape|ecosystem|era|age|environment|market|economy)\\b,?\\s*"), rep: function (m) { return keepCase(m, 'today, '); } },
     { label: 'Filler phrase removed', re: R("\\b(?:it" + A + "s|it is)\\s+(?:important|worth|crucial)\\s+(?:to note|noting|to remember)\\s+that\\s+"), rep: '' },
@@ -348,15 +356,20 @@ var CleanDraftEngine = (function () {
     { label: '"tapestry" replaced', re: R("\\btapestr(y|ies)\\b"), rep: function (m, s) { return keepCase(m, s.toLowerCase() === 'y' ? 'mix' : 'mixes'); } },
     { label: 'Furthermore / Moreover / Additionally', re: R("\\b(?:furthermore|moreover|additionally|in addition)\\s*,\\s*"), rep: function (m) { return keepCase(m, 'also, '); } },
     { label: 'Furthermore / Moreover / Additionally', re: R("\\b(?:furthermore|moreover|additionally)\\b"), rep: function (m) { return keepCase(m, 'also'); } },
-    { label: '"game-changer" replaced', re: R("\\b(?:a|an)\\s+(?:absolute\\s+|total\\s+|real\\s+)?game[- ]changer\\b"), rep: function (m) { return keepCase(m, 'a big deal'); } },
-    { label: '"game-changer" replaced', re: R("\\bgame[- ]changers?\\b"), rep: function (m) { return keepCase(m, /s$/i.test(m) ? 'big deals' : 'big deal'); } },
-    { label: '"game-changer" replaced', re: R("\\bgame[- ]changing\\b"), rep: function (m) { return keepCase(m, 'powerful'); } },
+    { label: '"game-changer" replaced', re: R("(^|[.!?]\\s+|^[ \\t]*[-*•][ \\t]+)game[- ]changer([.!?]?)(?=\\s|$)", 'gim'), rep: function (m, p, end) { return p + "It's a real improvement" + (end || '.'); } },
+    { label: '"game-changer" replaced', re: R("\\b(?:a|an)\\s+(?:absolute\\s+|total\\s+|real\\s+)?game[- ]changer\\b"), rep: function (m) { return keepCase(m, 'a real improvement'); } },
+    { label: '"game-changer" replaced', re: R("\\bgame[- ]changers?\\b"), rep: function (m) { return keepCase(m, /s$/i.test(m) ? 'real improvements' : 'a real improvement'); } },
+    { label: '"game-changer" replaced', re: R("\\bgame[- ]changing\\b"), rep: function (m) { return keepCase(m, 'useful'); } },
     { label: '"leverage" replaced', re: R("\\bleverag(ing|ed|es)\\b"), rep: function (m, s) { return keepCase(m, { ing: 'using', ed: 'used', es: 'uses' }[s.toLowerCase()]); } },
     { label: '"leverage" replaced', re: R("\\b(to|can|could|we|you|they|i|and|or|that|who|which|will|would|should|must|also|now|just|simply|let" + A + "s|help you|helps you)\\s+leverage\\b"), rep: function (m, w) { return w + ' use'; } },
     { label: '"leverage" replaced', re: R("\\bleverage\\s+(?=(?:their|your|our|my|the|this|these|those|its|his|her|ai|data|technology|tools?)\\b)"), rep: function (m) { return keepCase(m, 'use '); } },
     { label: '"leverage" replaced', re: R("^([ \\t]*)leverage\\b", 'gim'), rep: function (m, sp) { return sp + 'Use'; } },
-    { label: '"unlock" replaced', re: R("\\bunlock(s|ed|ing)?\\s+(your|their|our|its|the)\\s+(full\\s+|true\\s+)?potential\\b"), rep: function (m, s, who, full) { var v = { '': 'reach', s: 'reaches', ed: 'reached', ing: 'reaching' }[(s || '').toLowerCase()]; return keepCase(m, v + ' ' + who + ' ' + (full || '') + 'potential'); } },
+    { label: '"unlock" replaced', re: R("\\bunlock(s|ed|ing)?\\s+(your|their|our|its|the)\\s+(full\\s+|true\\s+)?potential\\b"), rep: function (m, s, who, full) { var v = { '': 'reach', s: 'reaches', ed: 'reached', ing: 'reaching' }[(s || '').toLowerCase()]; return keepCase(m, 'build ' + who + ' ' + (full || '') + 'potential'); } },
     { label: '"unlock" replaced', re: R("\\bunlock(s|ed|ing)?\\b"), rep: function (m, s) { return keepCase(m, { '': 'open up', s: 'opens up', ed: 'opened up', ing: 'opening up' }[(s || '').toLowerCase()]); } },
+    { label: '"utilize" replaced', re: R("\\butili[sz](e|es|ed|ing|ation|ations)\\b"), rep: function (m, s) { return keepCase(m, { e: 'use', es: 'uses', ed: 'used', ing: 'using', ation: 'use', ations: 'uses' }[s.toLowerCase()]); } },
+    { label: 'Business filler replaced', re: R("\\b(?:a|an)\\s+holistic\\s+approach\\b"), rep: function (m) { return keepCase(m, 'a complete approach'); } },
+    { label: 'Business filler replaced', re: R("\\bto\\s+streamline\\s+synergy\\b"), rep: 'to improve teamwork' },
+    { label: 'Business filler replaced', re: R("\\bsynergy\\b"), rep: function (m) { return keepCase(m, 'teamwork'); } },
     { label: '"landscape" replaced', re: R("\\bthe\\s+(?:(?:ever-evolving|ever-changing|rapidly evolving|rapidly changing|evolving|dynamic|complex|current|modern|digital)\\s+)?landscape\\s+of\\s+"), rep: '' },
     { label: '"landscape" replaced', re: R("\\b(?:ever-evolving|ever-changing|rapidly evolving|rapidly changing|evolving|dynamic|complex)\\s+landscape\\b"), rep: function (m) { return keepCase(m, 'space'); } },
     { label: '"landscape" replaced', re: R("\\blandscape(s)?\\b"), rep: function (m, s) { return keepCase(m, s ? 'spaces' : 'space'); } },
