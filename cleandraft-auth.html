@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CleanDraft.ai: Remove Em Dashes &amp; AI Clichés From Your Drafts</title>
+  <meta name="description" content="Paste a ChatGPT or Claude draft and CleanDraft strips em dashes, robotic intros and overused AI phrases like “delve into” before you post on LinkedIn or X. Runs in your browser. 3 free cleanups.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%238b5cf6%22/%3E%3Ctext x=%2216%22 y=%2222%22 font-size=%2216%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22 font-weight=%22bold%22%3ECD%3C/text%3E%3C/svg%3E">
+  <meta name="theme-color" content="#090d16">
+  <meta property="og:title" content="CleanDraft.ai: Remove AI fingerprints from your drafts">
+  <meta property="og:description" content="Strip em dashes, robotic intros and AI clichés in one click. Text is processed in your browser.">
+  <meta property="og:type" content="website">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        colors: { darkbg: '#090d16', cardbg: '#0f172a', cardborder: '#1e293b', brandpurple: '#8b5cf6', brandindigo: '#6366f1' }
+      } }
+    };
+  </script>
+  <style>
+    html, body { overflow-x: hidden; }
+    body { background-color: #090d16; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; }
+    .glow-effect { box-shadow: 0 0 50px -10px rgba(139, 92, 246, 0.25); }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .faq-chevron { transform: rotate(180deg); }
+    #toast { transition: opacity .2s ease, transform .2s ease; }
+    :focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-purple-500 selection:text-white">
+  <a href="#editor" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] bg-brandpurple text-white px-3 py-2 rounded-lg">Skip to the tool</a>
+
+  <!-- NAV -->
+  <header class="sticky top-0 z-50 backdrop-blur-md bg-darkbg/80 border-b border-cardborder">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <a href="#" class="flex items-center gap-2 min-w-0" aria-label="CleanDraft.ai home">
+        <span class="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-tr from-brandpurple to-brandindigo flex items-center justify-center text-white shadow-lg" aria-hidden="true">
+          <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+        </span>
+        <span class="font-extrabold text-xl tracking-tight text-white">CleanDraft<span class="text-brandpurple">.ai</span></span>
+      </a>
+      <nav aria-label="Main" class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+        <a href="#editor" class="hover:text-white transition-colors">Tool</a>
+        <a href="#comparison" class="hover:text-white transition-colors">Before / After</a>
+        <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
+        <a href="#faq" class="hover:text-white transition-colors">FAQ</a>
+      </nav>
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="signInBtn" type="button" class="px-3 py-2 text-sm font-medium text-slate-200 hover:text-white">Sign In</button>
+        <button id="getStartedBtn" type="button" class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-brandpurple to-brandindigo hover:opacity-90 rounded-lg shadow-md">Get Started</button>
+        <div id="profileMenu" class="hidden items-center gap-2 text-sm">
+          <img id="profileAvatar" class="hidden w-8 h-8 rounded-full border border-slate-600" alt="" />
+          <span id="profileEmail" class="max-w-[150px] truncate text-slate-200"></span>
+          <button id="signOutBtn" type="button" class="px-3 py-2 rounded-lg border border-slate-700 text-slate-300 hover:text-white">Sign Out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1">
+  <!-- HERO -->
+  <section class="relative pt-16 pb-10 md:pt-28 md:pb-16 px-4 text-center overflow-hidden">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-purple-900/25 via-transparent to-transparent -z-10" aria-hidden="true"></div>
+    <div class="max-w-4xl mx-auto">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium mb-8">
+        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+        <span>Your text is processed in your browser</span>
+      </div>
+      <h1 class="text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-tight mb-6">
+        Post drafts that don't read like <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400">ChatGPT wrote them</span>
+      </h1>
+      <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        CleanDraft strips em dashes, robotic intros and overused AI phrases (“delve into”, “a testament to”, “in today's fast-paced world”) from your ChatGPT or Claude drafts in one click, before you post on LinkedIn or X.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="#editor" class="w-full sm:w-auto px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-brandpurple to-brandindigo rounded-xl shadow-lg hover:shadow-purple-500/30 transition-all hover:-translate-y-0.5">
+          Clean your draft <i class="fa-solid fa-arrow-down ml-2" aria-hidden="true"></i>
+        </a>
+        <a href="#comparison" class="w-full sm:w-auto px-8 py-4 text-base font-semibold text-slate-200 bg-slate-800/70 border border-slate-700 hover:bg-slate-800 rounded-xl transition-all">
+          See an example
+        </a>
+      </div>
+      <p class="mt-5 text-xs text-slate-500">3 free cleanups with an account.</p>
+    </div>
+  </section>
+
+  <!-- TOOL -->
+  <section id="editor" class="py-10 px-4 max-w-7xl mx-auto w-full scroll-mt-20" aria-labelledby="tool-title">
+    <div class="bg-cardbg border border-cardborder rounded-2xl p-4 sm:p-6 md:p-8 glow-effect">
+      <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-cardborder gap-4">
+        <div>
+          <h2 id="tool-title" class="text-xl font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-brandpurple" aria-hidden="true"></i> Clean your AI draft
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Paste a ChatGPT or Claude draft. CleanDraft finds the tells and fixes them.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button id="loadSampleBtn" type="button" class="px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-file-lines text-purple-400" aria-hidden="true"></i> Load sample
+          </button>
+          <button id="clearBtn" type="button" class="px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-eraser text-purple-400" aria-hidden="true"></i> Clear
+          </button>
+          <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-cardborder text-xs font-medium text-slate-300" aria-live="polite">
+            Free Cleanups Left: <span id="cleanupCounter" class="font-bold text-brandpurple">—</span> / 3
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <div class="flex flex-col min-w-0">
+          <div class="flex items-center justify-between mb-2 gap-2">
+            <label for="inputText" class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Your AI draft</label>
+            <span class="text-xs text-slate-400 whitespace-nowrap">AI tells: <span id="scoreBefore" class="font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">0/100</span></span>
+          </div>
+          <textarea id="inputText" placeholder="Paste your draft here..." spellcheck="true" class="w-full h-72 p-4 bg-darkbg border border-cardborder rounded-xl text-slate-200 text-sm focus:outline-none focus:border-purple-500 resize-y custom-scrollbar leading-relaxed"></textarea>
+          <p class="mt-2 text-[11px] text-slate-500"><span id="wordCount">0</span> words · Tip: Ctrl/⌘ + Enter to clean</p>
+        </div>
+
+        <div class="flex flex-col min-w-0">
+          <div class="flex items-center justify-between mb-2 gap-2">
+            <span id="outputLabel" class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Cleaned draft</span>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-slate-400 whitespace-nowrap">After: <span id="scoreAfter" class="font-bold px-2 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20">–</span></span>
+              <button id="copyBtn" type="button" disabled aria-label="Copy cleaned text" class="text-xs font-medium text-purple-400 hover:text-purple-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1">
+                <i class="fa-regular fa-copy" aria-hidden="true"></i> Copy
+              </button>
+            </div>
+          </div>
+          <div id="outputText" role="region" aria-labelledby="outputLabel" aria-live="polite" tabindex="0" class="w-full h-72 p-4 bg-darkbg/50 border border-cardborder rounded-xl text-slate-200 text-sm overflow-y-auto custom-scrollbar leading-relaxed whitespace-pre-wrap break-words"><span class="text-slate-500 italic">Your cleaned draft will appear here.</span></div>
+          <div id="changesBox" class="mt-3 hidden">
+            <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">What changed</h3>
+            <ul id="changesList" class="flex flex-wrap gap-2 text-xs"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div id="limitBox" class="hidden mt-6 p-4 rounded-xl border border-brandpurple/40 bg-purple-500/10 text-sm text-slate-200" role="alert">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div><strong class="text-white">Your free cleanups are used up.</strong><p class="mt-1 text-slate-300">Upgrade for unlimited CleanDraft cleanups.</p></div>
+          <a href="https://cleandraftai.lemonsqueezy.com/checkout/buy/bcd88493-3b8f-48da-9ab8-559c587a4cde" target="_blank" rel="noopener" class="shrink-0 text-center px-4 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-brandpurple to-brandindigo">Upgrade · $9/month</a>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-cardborder flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p id="statsBanner" class="text-xs text-slate-400" aria-live="polite">Ready to clean your text.</p>
+        <button id="cleanBtn" type="button" class="w-full sm:w-auto px-8 py-3 text-sm font-semibold text-white bg-gradient-to-r from-brandpurple to-brandindigo rounded-xl shadow-md hover:shadow-purple-500/20 transition-all disabled:opacity-50">
+          Clean draft <i class="fa-solid fa-wand-magic-sparkles ml-1" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IT CATCHES -->
+  <section class="py-10 px-4 max-w-7xl mx-auto w-full" aria-labelledby="catches-title">
+    <h2 id="catches-title" class="text-2xl font-bold text-white text-center mb-8">What CleanDraft catches</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+      <div class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <i class="fa-solid fa-minus text-brandpurple mb-3" aria-hidden="true"></i>
+        <h3 class="font-semibold text-white mb-1">Em dashes</h3>
+        <p class="text-slate-400">Swapped for a comma, period or colon depending on the sentence, not a lazy hyphen.</p>
+      </div>
+      <div class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <i class="fa-solid fa-robot text-brandpurple mb-3" aria-hidden="true"></i>
+        <h3 class="font-semibold text-white mb-1">Robotic intros</h3>
+        <p class="text-slate-400">“Certainly!”, “Sure!”, “Great question!”, “Here's a LinkedIn post…:” and “I hope this helps!”</p>
+      </div>
+      <div class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <i class="fa-solid fa-language text-brandpurple mb-3" aria-hidden="true"></i>
+        <h3 class="font-semibold text-white mb-1">AI vocabulary</h3>
+        <p class="text-slate-400">delve, testament to, tapestry, game-changer, leverage, unlock, landscape, seamless, pivotal.</p>
+      </div>
+      <div class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <i class="fa-solid fa-diagram-project text-brandpurple mb-3" aria-hidden="true"></i>
+        <h3 class="font-semibold text-white mb-1">Stock structures</h3>
+        <p class="text-slate-400">“In today's fast-paced world”, “It's not just X, it's Y”, Furthermore / Moreover / Additionally.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BEFORE / AFTER -->
+  <section id="comparison" class="py-14 px-4 max-w-7xl mx-auto w-full scroll-mt-20" aria-labelledby="cmp-title">
+    <div class="text-center mb-10">
+      <h2 id="cmp-title" class="text-3xl font-bold text-white mb-3">Notice the difference</h2>
+      <p class="text-slate-400 text-sm max-w-xl mx-auto">A real example. The right side is exactly what the engine on this page outputs for the draft on the left.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+      <div class="bg-cardbg/50 border border-red-500/20 rounded-xl p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <h3 class="text-sm font-semibold text-slate-400 uppercase">Original draft</h3>
+          <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20">AI tells: 100/100</span>
+        </div>
+        <p id="exampleBefore" class="text-slate-300 text-sm leading-relaxed whitespace-pre-line break-words">Certainly! Here's a LinkedIn post for you:
+
+In today's fast-paced digital world, consistency is a game-changer. It's not just about posting more—it's about showing up with something useful. Let's delve into what actually works.
+
+Furthermore, the best creators leverage their own stories—not templates—to unlock real engagement.</p>
+      </div>
+      <div class="bg-cardbg border border-emerald-500/30 rounded-xl p-6 glow-effect">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <h3 class="text-sm font-semibold text-slate-400 uppercase">CleanDraft output</h3>
+          <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">AI tells: 0/100</span>
+        </div>
+        <p id="exampleAfter" class="text-slate-200 text-sm leading-relaxed whitespace-pre-line break-words">Today, consistency is a big deal. It's about showing up with something useful, not just posting more. Let's look into what actually works.
+
+Also, the best creators use their own stories, not templates, to open up real engagement.</p>
+        <ul class="mt-4 flex flex-wrap gap-2 text-xs" aria-label="Changes made in this example"><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">Robotic intro removed ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"In today's fast-paced world" opener ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"It's not just X, it's Y" structure ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"delve" replaced ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">Furthermore / Moreover / Additionally ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"game-changer" replaced ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"leverage" replaced ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">"unlock" replaced ×1</li><li class="px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20">Em dashes replaced ×2</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" class="py-14 px-4 max-w-4xl mx-auto w-full text-center scroll-mt-20" aria-labelledby="pricing-title">
+    <div class="mb-10">
+      <h2 id="pricing-title" class="text-3xl font-bold text-white mb-3">Simple pricing</h2>
+      <p class="text-slate-400 text-sm">Start with 3 free cleanups. Then one plan, one price.</p>
+    </div>
+    <div class="bg-cardbg border border-brandpurple/40 rounded-2xl p-6 sm:p-8 max-w-md mx-auto relative glow-effect">
+      <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-brandpurple to-brandindigo text-white text-xs font-bold uppercase tracking-wider whitespace-nowrap">CleanDraft Unlimited</div>
+      <div class="mt-4 mb-6">
+        <span class="text-5xl font-extrabold text-white">$9</span><span class="text-slate-400 text-sm"> / month</span>
+      </div>
+      <ul class="text-left space-y-4 mb-8 text-sm text-slate-300">
+        <li class="flex items-start gap-3"><i class="fa-solid fa-check text-emerald-400 mt-0.5" aria-hidden="true"></i><span>Unlimited cleanups (after your 3 free ones)</span></li>
+        <li class="flex items-start gap-3"><i class="fa-solid fa-check text-emerald-400 mt-0.5" aria-hidden="true"></i><span>Em dash, robotic intro and AI cliché cleanup</span></li>
+        <li class="flex items-start gap-3"><i class="fa-solid fa-check text-emerald-400 mt-0.5" aria-hidden="true"></i><span>A list of what changed, every time</span></li>
+        <li class="flex items-start gap-3"><i class="fa-solid fa-check text-emerald-400 mt-0.5" aria-hidden="true"></i><span>Text processed in your browser, not sent to our servers</span></li>
+      </ul>
+      <a href="https://cleandraftai.lemonsqueezy.com/checkout/buy/bcd88493-3b8f-48da-9ab8-559c587a4cde" target="_blank" rel="noopener" class="block w-full py-3.5 px-6 rounded-xl font-semibold text-white bg-gradient-to-r from-brandpurple to-brandindigo hover:opacity-95 transition-all shadow-lg hover:shadow-purple-500/25">
+        Get CleanDraft Unlimited
+      </a>
+      <p class="text-xs text-slate-500 mt-4">Checkout by Lemon Squeezy. Cancel anytime.</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="py-14 px-4 max-w-4xl mx-auto w-full scroll-mt-20" aria-labelledby="faq-title">
+    <div class="text-center mb-10">
+      <h2 id="faq-title" class="text-3xl font-bold text-white mb-3">Frequently asked questions</h2>
+    </div>
+    <div class="space-y-3">
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5 group">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">Is my text sent anywhere?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">No. The cleanup engine is plain JavaScript that runs in your browser. Your draft is processed on your device and is not sent to or stored on a server.</p>
+      </details>
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">What exactly does it change?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">Em dashes (replaced with a comma, period or colon based on context), robotic intros and sign-offs (“Certainly!”, “Great question!”, “I hope this helps!”), stock openers like “In today's fast-paced world”, the “It's not just X, it's Y” pattern, and overused words such as delve, testament, tapestry, game-changer, leverage, unlock and landscape. After each cleanup you get a list of what changed.</p>
+      </details>
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">Will it rewrite my whole post?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">No. It makes targeted, rule-based edits and leaves the rest of your wording alone. Give the result a quick read before you post.</p>
+      </details>
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">Does it guarantee my post passes AI detectors?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">No. CleanDraft removes the most common tells that readers notice. It doesn't promise any detector score, and the “AI tells” number on this page is just a count of what the engine found.</p>
+      </details>
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">How do the free cleanups work?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">Create an account to get 3 free cleanups. Your remaining uses are securely tracked to your account. After that, CleanDraft Unlimited is $9/month.</p>
+      </details>
+      <details class="bg-cardbg border border-cardborder rounded-xl p-5">
+        <summary class="flex items-center justify-between gap-4 text-base font-semibold text-white">Can I cancel anytime?<i class="fa-solid fa-chevron-down faq-chevron text-slate-500 text-xs transition-transform" aria-hidden="true"></i></summary>
+        <p class="text-slate-400 text-sm leading-relaxed mt-3">Yes. Payments are handled by Lemon Squeezy, and you can cancel your subscription at any time.</p>
+      </details>
+    </div>
+  </section>
+  </main>
+
+  <footer class="border-t border-cardborder py-8 px-4 text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center">
+      <div>© 2026 CleanDraft.ai</div>
+      <div>Your text is processed in your browser.</div>
+    </div>
+  </footer>
+
+  <div id="authModal" class="hidden fixed inset-0 z-[80] items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="w-full max-w-md rounded-2xl border border-cardborder bg-cardbg p-6 shadow-2xl">
+      <div class="flex items-start justify-between"><div><h2 id="authTitle" class="text-xl font-bold text-white">Welcome to CleanDraft</h2><p class="mt-1 text-sm text-slate-400">Sign in or create your account to start your 3 free cleanups.</p></div><button id="closeAuthBtn" type="button" class="text-slate-400 hover:text-white" aria-label="Close">✕</button></div>
+      <div class="mt-5 grid grid-cols-2 gap-3">
+        <button data-oauth="google" class="rounded-lg border border-slate-700 px-3 py-2.5 text-sm text-white hover:bg-slate-800"><i class="fa-brands fa-google mr-2"></i>Google</button>
+        <button data-oauth="github" class="rounded-lg border border-slate-700 px-3 py-2.5 text-sm text-white hover:bg-slate-800"><i class="fa-brands fa-github mr-2"></i>GitHub</button>
+      </div>
+      <div class="my-4 flex items-center gap-3 text-xs text-slate-500"><span class="h-px flex-1 bg-slate-700"></span>or with email<span class="h-px flex-1 bg-slate-700"></span></div>
+      <form id="authForm" class="space-y-3">
+        <input id="authEmail" type="email" autocomplete="email" required placeholder="Email address" class="w-full rounded-lg border border-slate-700 bg-darkbg px-3 py-2.5 text-sm text-white placeholder:text-slate-500">
+        <div class="relative">
+          <input id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="Password (at least 6 characters)" class="w-full rounded-lg border border-slate-700 bg-darkbg px-3 py-2.5 text-sm text-white placeholder:text-slate-500 pr-11">
+          <button type="button" id="togglePassword" aria-label="Show password" aria-pressed="false" class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-white"><svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg><svg id="eyeOffIcon" xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M10.6 6a9.8 9.8 0 011.4-.1c6 0 9.5 6.1 9.5 6.1a16 16 0 01-3.2 3.9M6.6 7.6A16 16 0 002.5 12S6 18.1 12 18.1c1.5 0 2.8-.4 4-.9M9.9 9.9a3 3 0 004.2 4.2"/></svg></button>
+        </div>
+        <div class="grid grid-cols-2 gap-3"><button id="emailSignIn" type="button" class="rounded-lg border border-slate-700 px-3 py-2.5 text-sm text-slate-200 hover:bg-slate-800">Sign In</button><button type="submit" class="rounded-lg bg-gradient-to-r from-brandpurple to-brandindigo px-3 py-2.5 text-sm font-semibold text-white">Create account</button></div>
+      </form>
+      <p id="authMessage" class="mt-3 min-h-5 text-xs text-slate-400" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite" class="pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 translate-y-2 opacity-0 z-[70] px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white shadow-xl max-w-[90vw] text-center"></div>
+
+  <script>
+/* CleanDraft engine v3: self-contained, runs in the browser. */
+var CleanDraftEngine = (function () {
+  var A = "['\u2019]"; // straight or curly apostrophe
+  function keepCase(src, rep) {
+    if (!src) return rep;
+    if (src[0] === src[0].toUpperCase() && src[0] !== src[0].toLowerCase()) return rep.charAt(0).toUpperCase() + rep.slice(1);
+    return rep;
+  }
+  function R(s, f) { return new RegExp(s, f || 'gi'); }
+  // Each rule: label (shown in the changes list), re, rep (string or function)
+  var RULES = [
+    // ---- robotic intros / outros ----
+    { label: 'Robotic intro removed', re: R("^[ \\t]*(?:certainly|sure|absolutely|of course|great question|what a great question|excellent question|good question)\\s*[!.,]+[ \\t]*(?:(?:here" + A + "s|here is|here are|below is)[^\\n]*:[ \\t]*\\n*)?", 'gim'), rep: '' },
+    { label: 'Robotic intro removed', re: R("^[ \\t]*(?:here" + A + "s|here is|here are)\\s+(?:a|an|the|your)\\s+[^\\n]{0,80}?(?:post|draft|version|caption|thread|tweet|text)[^\\n]{0,40}?:[ \\t]*\\n+", 'gim'), rep: '' },
+    { label: 'Robotic intro removed', re: R("^[ \\t]*as an ai(?: language model)?,\\s*", 'gim'), rep: '' },
+    { label: 'Robotic outro removed', re: R("\\n*[ \\t]*(?:i hope this helps[!.]?|let me know if you(?:" + A + "d| would) like[^\\n]*|feel free to (?:adjust|tweak|modify)[^\\n]*)[ \\t]*$", 'gim'), rep: '' },
+    // ---- openers ----
+    { label: '"In today\'s fast-paced world" opener', re: R("\\bin today" + A + "s\\s+(?:(?:fast-paced|fast paced|ever-changing|ever-evolving|rapidly evolving|rapidly changing|hyper-connected|digital|modern|competitive|increasingly digital)[ ,]+)+(?:digital\\s+)?(?:world|landscape|ecosystem|era|age|environment|market|economy)\\b,?\\s*"), rep: function (m) { return keepCase(m, 'today, '); } },
+    { label: 'Filler phrase removed', re: R("\\b(?:it" + A + "s|it is)\\s+(?:important|worth|crucial)\\s+(?:to note|noting|to remember)\\s+that\\s+"), rep: '' },
+    { label: 'Filler phrase removed', re: R("^[ \\t]*in conclusion,\\s*", 'gim'), rep: '' },
+    // ---- "it's not just X, it's Y" ----
+    { label: '"It\'s not just X, it\'s Y" structure', re: R("\\b(it" + A + "s|it is|this is|that" + A + "s)\\s+not\\s+(?:just|only|merely|simply)\\s+(about\\s+)?([^,;\\u2014\\u2013.!?\\n]{1,80}?)\\s*(?:\\s[\\u2014\\u2013]\\s|\\u2014|--|,|;|\\.)\\s*(?:it" + A + "s|it is|this is|that" + A + "s)\\s+(about\\s+)?([^.!?\\n]{1,120})"),
+      rep: function (m, lead, ab1, x, ab2, y) { var about = ab2 || ab1 || ''; return lead + ' ' + about + y.trim() + ', not just ' + x.trim(); } },
+    // ---- delve (most specific first; never "look closer into") ----
+    { label: '"delve" replaced', re: R("\\bdelve\\s+deeper\\s+into\\b"), rep: function (m) { return keepCase(m, 'dig deeper into'); } },
+    { label: '"delve" replaced', re: R("\\bdelve\\s+deeper\\b"), rep: function (m) { return keepCase(m, 'dig deeper'); } },
+    { label: '"delve" replaced', re: R("\\bdelve\\s+into\\b"), rep: function (m) { return keepCase(m, 'look into'); } },
+    { label: '"delve" replaced', re: R("\\bdelves\\s+into\\b"), rep: function (m) { return keepCase(m, 'looks into'); } },
+    { label: '"delve" replaced', re: R("\\bdelved\\s+into\\b"), rep: function (m) { return keepCase(m, 'looked into'); } },
+    { label: '"delve" replaced', re: R("\\bdelving\\s+into\\b"), rep: function (m) { return keepCase(m, 'looking into'); } },
+    { label: '"delve" replaced', re: R("\\bdelv(e|es|ed|ing)\\b"), rep: function (m, s) { return keepCase(m, { e: 'dig in', es: 'digs in', ed: 'dug in', ing: 'digging in' }[s.toLowerCase()]); } },
+    // ---- vocabulary ----
+    { label: '"testament to" replaced', re: R("\\b(?:a|the)\\s+(?:true\\s+|real\\s+)?testament\\s+to\\b"), rep: function (m) { return keepCase(m, 'proof of'); } },
+    { label: '"testament to" replaced', re: R("\\btestament\\s+to\\b"), rep: function (m) { return keepCase(m, 'proof of'); } },
+    { label: '"tapestry" replaced', re: R("\\b(?:a|the)\\s+(?:rich|vibrant|intricate|complex)\\s+tapestry\\s+of\\b"), rep: function (m) { return keepCase(m, 'a mix of'); } },
+    { label: '"tapestry" replaced', re: R("\\btapestry\\s+of\\b"), rep: function (m) { return keepCase(m, 'mix of'); } },
+    { label: '"tapestry" replaced', re: R("\\btapestr(y|ies)\\b"), rep: function (m, s) { return keepCase(m, s.toLowerCase() === 'y' ? 'mix' : 'mixes'); } },
+    { label: 'Furthermore / Moreover / Additionally', re: R("\\b(?:furthermore|moreover|additionally|in addition)\\s*,\\s*"), rep: function (m) { return keepCase(m, 'also, '); } },
+    { label: 'Furthermore / Moreover / Additionally', re: R("\\b(?:furthermore|moreover|additionally)\\b"), rep: function (m) { return keepCase(m, 'also'); } },
+    { label: '"game-changer" replaced', re: R("\\b(?:a|an)\\s+(?:absolute\\s+|total\\s+|real\\s+)?game[- ]changer\\b"), rep: function (m) { return keepCase(m, 'a big deal'); } },
+    { label: '"game-changer" replaced', re: R("\\bgame[- ]changers?\\b"), rep: function (m) { return keepCase(m, /s$/i.test(m) ? 'big deals' : 'big deal'); } },
+    { label: '"game-changer" replaced', re: R("\\bgame[- ]changing\\b"), rep: function (m) { return keepCase(m, 'powerful'); } },
+    { label: '"leverage" replaced', re: R("\\bleverag(ing|ed|es)\\b"), rep: function (m, s) { return keepCase(m, { ing: 'using', ed: 'used', es: 'uses' }[s.toLowerCase()]); } },
+    { label: '"leverage" replaced', re: R("\\b(to|can|could|we|you|they|i|and|or|that|who|which|will|would|should|must|also|now|just|simply|let" + A + "s|help you|helps you)\\s+leverage\\b"), rep: function (m, w) { return w + ' use'; } },
+    { label: '"leverage" replaced', re: R("\\bleverage\\s+(?=(?:their|your|our|my|the|this|these|those|its|his|her|ai|data|technology|tools?)\\b)"), rep: function (m) { return keepCase(m, 'use '); } },
+    { label: '"leverage" replaced', re: R("^([ \\t]*)leverage\\b", 'gim'), rep: function (m, sp) { return sp + 'Use'; } },
+    { label: '"unlock" replaced', re: R("\\bunlock(s|ed|ing)?\\s+(your|their|our|its|the)\\s+(full\\s+|true\\s+)?potential\\b"), rep: function (m, s, who, full) { var v = { '': 'reach', s: 'reaches', ed: 'reached', ing: 'reaching' }[(s || '').toLowerCase()]; return keepCase(m, v + ' ' + who + ' ' + (full || '') + 'potential'); } },
+    { label: '"unlock" replaced', re: R("\\bunlock(s|ed|ing)?\\b"), rep: function (m, s) { return keepCase(m, { '': 'open up', s: 'opens up', ed: 'opened up', ing: 'opening up' }[(s || '').toLowerCase()]); } },
+    { label: '"landscape" replaced', re: R("\\bthe\\s+(?:(?:ever-evolving|ever-changing|rapidly evolving|rapidly changing|evolving|dynamic|complex|current|modern|digital)\\s+)?landscape\\s+of\\s+"), rep: '' },
+    { label: '"landscape" replaced', re: R("\\b(?:ever-evolving|ever-changing|rapidly evolving|rapidly changing|evolving|dynamic|complex)\\s+landscape\\b"), rep: function (m) { return keepCase(m, 'space'); } },
+    { label: '"landscape" replaced', re: R("\\blandscape(s)?\\b"), rep: function (m, s) { return keepCase(m, s ? 'spaces' : 'space'); } },
+    { label: 'Other AI buzzwords', re: R("\\bnavigat(e|es|ing)\\s+the\\s+complexities\\s+of\\b"), rep: function (m, s) { return keepCase(m, { e: 'handle', es: 'handles', ing: 'handling' }[s.toLowerCase()]); } },
+    { label: 'Other AI buzzwords', re: R("\\bin\\s+the\\s+realm\\s+of\\b"), rep: function (m) { return keepCase(m, 'in'); } },
+    { label: 'Other AI buzzwords', re: R("\\bseamless(ly)?\\b"), rep: function (m, s) { return keepCase(m, s ? 'smoothly' : 'smooth'); } },
+    { label: 'Other AI buzzwords', re: R("\\bembark(s|ed|ing)?\\s+on\\b"), rep: function (m, s) { return keepCase(m, { '': 'start', s: 'starts', ed: 'started', ing: 'starting' }[(s || '').toLowerCase()]); } },
+    { label: 'Other AI buzzwords', re: R("\\bpivotal\\b"), rep: function (m) { return keepCase(m, 'key'); } }
+  ];
+
+  var WORDS_AFTER_COMMA = /^(?:and|but|so|or|yet|which|who|because|while|not|especially|including|like|from|even|just|all)\b/i;
+  var CLAUSE_START = /^(?:it|it's|it’s|this|that's|that’s|they|they're|they’re|we|we're|we’re|you|you're|you’re|i|i'm|i’m|he|she|there's|there’s|there is)\s+\S+\s+\S+/i;
+
+  function fixEmDashes(text, bump) {
+    // normalise: spaced en dashes and double hyphens used as em dashes
+    text = text.replace(/(\S)\s+(?:\u2013|--)\s+(?=\S)/g, function (m, a) { return a + ' \u2014 '; });
+    // bullets that start with a dash
+    text = text.replace(/^([ \t]*)[\u2014\u2013][ \t]*/gm, function (m, sp) { bump('Em dashes replaced'); return sp + '- '; });
+    // paired dashes around a short aside: "X—aside—Y" -> "X, aside, Y"
+    text = text.replace(/\s*\u2014\s*([^\u2014.!?:\n]{1,60}?)\s*\u2014\s*/g, function (m, aside) { bump('Em dashes replaced', 2); return ', ' + aside.trim() + ', '; });
+    // single dashes, decided by context
+    text = text.replace(/([^\n])\s*\u2014\s*([^\n]*)/g, function (m, before, after) {
+      bump('Em dashes replaced');
+      if (!after) return before + '.';
+      var tail = after.split(/[.!?\n]/)[0].trim();
+      var words = tail ? tail.split(/\s+/).length : 0;
+      if (/[,;:]/.test(before)) return before + ' ' + after;
+      if (WORDS_AFTER_COMMA.test(after)) return before + ', ' + after;
+      if (CLAUSE_START.test(after)) return before + '. ' + after.charAt(0).toUpperCase() + after.slice(1);
+      if (/^[A-Z]/.test(after) && !/^I\b/.test(after) && words > 3) return before + '. ' + after;
+      if (words === 1 && /ly$/i.test(tail)) return before + ', ' + after;
+      if (words > 0 && words <= 4) return before + ': ' + after;
+      return before + ', ' + after;
+    });
+    return text;
+  }
+
+  function tidy(text) {
+    return text
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/[ \t]+([,.;:!?])/g, '$1')
+      .replace(/,\s*,/g, ',')
+      .replace(/,\s*([.!?:;])/g, '$1')
+      .replace(/:\s*,/g, ':')
+      .replace(/([.!?])\s*,\s*/g, '$1 ')
+      .replace(/^[ \t]*,\s*/gm, '')
+      .replace(/^[ \t]+|[ \t]+$/gm, '')
+      .replace(/(^|[.!?]\s+|\n\s*(?:[-•*]\s+)?)([a-z])/g, function (m, p, c) { return p + c.toUpperCase(); })
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  function clean(input) {
+    var counts = {}, order = [];
+    function bump(label, n) { if (!(label in counts)) { counts[label] = 0; order.push(label); } counts[label] += (n || 1); }
+    var text = String(input || '').replace(/\r\n?/g, '\n');
+    RULES.forEach(function (rule) {
+      text = text.replace(rule.re, function () {
+        bump(rule.label);
+        return typeof rule.rep === 'function' ? rule.rep.apply(null, arguments) : rule.rep;
+      });
+    });
+    text = fixEmDashes(text, bump);
+    text = tidy(text);
+    // don't force a capital if the user's text started lowercase (e.g. a fragment)
+    var firstIn = (String(input || '').match(/[A-Za-z]/) || [''])[0];
+    if (firstIn && firstIn === firstIn.toLowerCase() && text) text = text.charAt(0).toLowerCase() + text.slice(1);
+    var changes = order.map(function (l) { return { label: l, count: counts[l] }; });
+    var total = changes.reduce(function (s, c) { return s + c.count; }, 0);
+    return { text: text, changes: changes, total: total };
+  }
+
+  function score(input) {
+    var t = String(input || '');
+    if (!t.trim()) return 0;
+    var hits = clean(t).total;
+    var words = t.trim().split(/\s+/).length;
+    // density-based 0-100: hits per 100 words, scaled
+    return Math.min(100, Math.round(hits * 12 + (hits / Math.max(words, 1)) * 400));
+  }
+  return { clean: clean, score: score };
+})();
+
+
+  </script>
+  <script>
+  (function () {
+    'use strict';
+    // Paste your Supabase project URL and anon/public key here. Never use a service-role key in this page.
+    var SUPABASE_URL = 'https://dfatmtoefofrsozawyjw.supabase.co';
+    var SUPABASE_ANON_KEY =  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmYXRtdG9lZm9mcnNvemF3eWp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNDczMTcsImV4cCI6MjEwODYyMzMxN30.JmEQUxxA73drF_60MZeY8uwwh4JGnLB5GMQfGi27eXQ';
+    var FREE_TOTAL = 3;
+    var SAMPLE = "In today's fast-paced digital world, building a startup—especially in AI—is a testament to hard work. Let's delve deeper into this tapestry of innovation. Furthermore, it's not just about efficiency—it's about leverage.";
+    var $ = function (id) { return document.getElementById(id); };
+    var input = $('inputText'), output = $('outputText'), copyBtn = $('copyBtn'), cleanBtn = $('cleanBtn');
+    var lastOutput = '', currentUser = null, profile = null, busy = false;
+    var client = null;
+    var cfgReady = SUPABASE_URL.indexOf('YOUR_PROJECT_ID') === -1 && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY';
+    document.querySelectorAll('[data-free-total]').forEach(function (el) { el.textContent = FREE_TOTAL; });
+
+    var toastTimer;
+    function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.remove('opacity-0', 'translate-y-2'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.add('opacity-0', 'translate-y-2'); }, 2600); }
+    function authMessage(msg) { $('authMessage').textContent = msg || ''; }
+    function openAuth() { $('authModal').classList.remove('hidden'); $('authModal').classList.add('flex'); authMessage(cfgReady ? '' : 'Add your Supabase URL and anon key in the page script to enable accounts.'); }
+    function closeAuth() { $('authModal').classList.add('hidden'); $('authModal').classList.remove('flex'); }
+    function setBusy(on) { busy = on; cleanBtn.disabled = on; cleanBtn.classList.toggle('opacity-50', on); }
+    function showLimit(show) { $('limitBox').classList.toggle('hidden', !show); }
+    function renderProfile() {
+      var signedIn = !!currentUser;
+      $('signInBtn').classList.toggle('hidden', signedIn); $('getStartedBtn').classList.toggle('hidden', signedIn);
+      $('profileMenu').classList.toggle('hidden', !signedIn); $('profileMenu').classList.toggle('flex', signedIn);
+      if (signedIn) {
+        $('profileEmail').textContent = currentUser.email || 'Signed in';
+        var avatar = currentUser.user_metadata && (currentUser.user_metadata.avatar_url || currentUser.user_metadata.picture);
+        $('profileAvatar').classList.toggle('hidden', !avatar); if (avatar) $('profileAvatar').src = avatar;
+      } else { $('profileEmail').textContent = ''; $('profileAvatar').classList.add('hidden'); }
+      var remaining = profile ? Math.max(0, FREE_TOTAL - Number(profile.cleanups_used || 0)) : null;
+      $('cleanupCounter').textContent = profile && profile.is_unlimited ? '∞' : (remaining === null ? '—' : remaining);
+      showLimit(!!(profile && !profile.is_unlimited && remaining <= 0));
+    }
+    async function loadProfile() {
+      if (!currentUser) { profile = null; renderProfile(); return; }
+      var result = await client.from('profiles').select('cleanups_used,is_unlimited').eq('id', currentUser.id).single();
+      if (result.error) { console.error('Profile load failed', result.error); profile = null; toast('Could not load your usage. Refresh and try again.'); }
+      else profile = result.data;
+      renderProfile();
+    }
+    function badge(el, score) { el.textContent = score + '/100'; var cls = score > 50 ? 'bg-red-500/10 text-red-400 border-red-500/20' : score > 20 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'; el.className = 'font-bold px-2 py-0.5 rounded border ' + cls; }
+    function onInput() { var v = input.value; $('wordCount').textContent = v.trim() ? v.trim().split(/\s+/).length : 0; badge($('scoreBefore'), CleanDraftEngine.score(v)); }
+    function renderChanges(changes) {
+      var list = $('changesList'); list.innerHTML = '';
+      if (!changes.length) { var li = document.createElement('li'); li.className = 'px-2 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700'; li.textContent = 'No AI tells found. Your draft looks clean.'; list.appendChild(li); }
+      changes.forEach(function (c) { var li = document.createElement('li'); li.className = 'px-2 py-1 rounded bg-purple-500/10 text-purple-200 border border-purple-500/20'; li.textContent = c.label + ' ×' + c.count; list.appendChild(li); }); $('changesBox').classList.remove('hidden');
+    }
+    async function clean() {
+      var text = input.value;
+      if (!text.trim()) { toast('Paste a draft first.'); input.focus(); return; }
+      if (!cfgReady || !client) { openAuth(); return; }
+      if (!currentUser) { openAuth(); authMessage('Sign in or create an account to use your free cleanups.'); return; }
+      if (busy) return;
+      setBusy(true);
+      try {
+        // The RPC is the authoritative quota check and decrement. Do not run or display a cleanup if it rejects.
+        var used = await client.rpc('use_cleanup');
+        if (used.error) throw used.error;
+        var result = typeof used.data === 'string' ? JSON.parse(used.data) : used.data;
+        if (!result || result.allowed !== true) { await loadProfile(); showLimit(true); $('limitBox').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+        profile = { cleanups_used: result.cleanups_used, is_unlimited: result.is_unlimited };
+        renderProfile();
+        var r = CleanDraftEngine.clean(text); lastOutput = r.text; output.textContent = r.text; copyBtn.disabled = !r.text; badge($('scoreAfter'), CleanDraftEngine.score(r.text)); renderChanges(r.changes);
+        $('statsBanner').textContent = result.is_unlimited ? (r.total ? 'Done. ' + r.total + ' change' + (r.total === 1 ? '' : 's') + ' made. Unlimited cleanups enabled.' : 'Done. Nothing to fix. Unlimited cleanups enabled.') : (r.total ? 'Done. ' + r.total + ' change' + (r.total === 1 ? '' : 's') + ' made. ' + (FREE_TOTAL - result.cleanups_used) + ' free cleanup' + (FREE_TOTAL - result.cleanups_used === 1 ? '' : 's') + ' left.' : 'Done. Nothing to fix. ' + (FREE_TOTAL - result.cleanups_used) + ' free cleanup' + (FREE_TOTAL - result.cleanups_used === 1 ? '' : 's') + ' left.');
+      } catch (e) { console.error(e); toast(e.message && /sign|auth/i.test(e.message) ? 'Please sign in again.' : 'Could not reserve a cleanup. Please try again.'); }
+      finally { setBusy(false); }
+    }
+    function fallbackCopy(text) { var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.top = '-1000px'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length); var ok = false; try { ok = document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); return ok; }
+    function copy() { if (!lastOutput) return; var done = function () { toast('Copied to clipboard'); }; var fail = function () { if (fallbackCopy(lastOutput)) done(); else toast('Copy failed. Select the text and copy it manually.'); }; if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(lastOutput).then(done, fail); else fail(); }
+    $('signInBtn').addEventListener('click', openAuth); $('getStartedBtn').addEventListener('click', openAuth); $('closeAuthBtn').addEventListener('click', closeAuth);
+    $('authModal').addEventListener('click', function (e) { if (e.target === $('authModal')) closeAuth(); });
+    document.querySelectorAll('[data-oauth]').forEach(function (btn) { btn.addEventListener('click', async function () { if (!cfgReady) return openAuth(); authMessage('Redirecting to ' + btn.dataset.oauth + '…'); var r = await client.auth.signInWithOAuth({ provider: btn.dataset.oauth, options: { redirectTo: window.location.href.split('#')[0] } }); if (r.error) authMessage(r.error.message); }); });
+    $('authForm').addEventListener('submit', async function (e) { e.preventDefault(); if (!cfgReady) return authMessage('Add your Supabase URL and anon key in this page first.'); authMessage('Creating your account…'); var r = await client.auth.signUp({ email: $('authEmail').value.trim(), password: $('authPassword').value }); if (r.error) return authMessage(r.error.message); if (r.data.session) { authMessage('Account created. Your 3 free cleanups are ready.'); } else { authMessage('Check your email to confirm your account, then sign in.'); } });
+    $('emailSignIn').addEventListener('click', async function () { if (!cfgReady) return authMessage('Add your Supabase URL and anon key in this page first.'); authMessage('Signing in…'); var r = await client.auth.signInWithPassword({ email: $('authEmail').value.trim(), password: $('authPassword').value }); if (r.error) authMessage(r.error.message); });
+    $('signOutBtn').addEventListener('click', async function () { var r = await client.auth.signOut(); if (r.error) toast(r.error.message); });
+    input.addEventListener('input', onInput); input.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); clean(); } }); cleanBtn.addEventListener('click', clean); copyBtn.addEventListener('click', copy);
+    $('loadSampleBtn').addEventListener('click', function () { input.value = SAMPLE; onInput(); input.focus(); });
+    $('clearBtn').addEventListener('click', function () { input.value = ''; lastOutput = ''; copyBtn.disabled = true; onInput(); output.innerHTML = '<span class="text-slate-500 italic">Your cleaned draft will appear here.</span>'; $('scoreAfter').textContent = '–'; $('changesBox').classList.add('hidden'); $('statsBanner').textContent = 'Ready to clean your text.'; });
+    if (window.supabase && cfgReady) { client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); client.auth.onAuthStateChange(function (event, session) { currentUser = session && session.user || null; renderProfile(); if (currentUser) { closeAuth(); setTimeout(loadProfile, 0); } else { profile = null; renderProfile(); } }); client.auth.getSession().then(function (r) { currentUser = r.data.session && r.data.session.user || null; renderProfile(); return loadProfile(); }).catch(function (e) { console.error(e); }); }
+    else { renderProfile(); }
+    onInput();
+  })();
+  
+    (function () { var b = document.getElementById('togglePassword'), p = document.getElementById('authPassword'); if (!b || !p) return; b.addEventListener('click', function () { var show = p.type === 'password'; p.type = show ? 'text' : 'password'; b.setAttribute('aria-pressed', show ? 'true' : 'false'); b.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); document.getElementById('eyeIcon').classList.toggle('hidden', show); document.getElementById('eyeOffIcon').classList.toggle('hidden', !show); }); })();
+</script>
+</body>
+</html>
